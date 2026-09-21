@@ -1,0 +1,97 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260905220731
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 26584
+PSVersion: 5.1.26100.9278
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9278
+BuildVersion: 10.0.26100.9278
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Iniciando bÃºsqueda de actualizaciones...
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+  ██████████████████████████████  100%
+Done
+Updating source: winget-font...
+Done
+Name                                Id                         Version     Available Source
+-------------------------------------------------------------------------------------------
+Claude                              Anthropic.Claude           1.40609.1.0 1.44121.2 winget
+Cursor (User)                       Anysphere.Cursor           3.14.27     3.19.7    winget
+Microsoft Visual Studio Code (User) Microsoft.VisualStudioCode 1.136.0     1.136.1   winget
+OpenCode 1.18.27                    SST.OpenCodeDesktop        1.18.27     1.18.29   winget
+Telegram Desktop                    Telegram.TelegramDesktop   7.1.4       7.2.5     winget
+Windows Subsystem for Linux         Microsoft.WSL              2.7.12.0    2.7.13    winget
+6 upgrades available.
+
+(1/6) Found OpenCode [SST.OpenCodeDesktop] Version 1.18.29
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/anomalyco/opencode/releases/download/v1.18.29/opencode-desktop-win-x64.exe
+  ██████████████████████████████   120 MB /  120 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(2/6) Found Telegram Desktop [Telegram.TelegramDesktop] Version 7.2.5
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/telegramdesktop/tdesktop/releases/download/v7.2.5/tsetup-x64.7.2.5.exe
+  ██████████████████████████████  52.7 MB / 52.7 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(3/6) Found Microsoft Visual Studio Code [Microsoft.VisualStudioCode] Version 1.136.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://vscode.download.prss.microsoft.com/dbazure/download/stable/a44adf7f53e00964ab890f9f8758a334f1fc15bc/
+VSCodeUserSetup-x64-1.136.1.exe
+  ██████████████████████████████   229 MB /  229 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(4/6) Found Cursor [Anysphere.Cursor] Version 3.19.7
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://downloads.cursor.com/production/90de2327392570a5f5f625c656c6749d228e6437/win32/x64/user-setup/Cursor
+UserSetup-x64-3.19.7.exe
+  ██████████████████████████████   196 MB /  196 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(5/6) Found Claude [Anthropic.Claude] Version 1.44121.2
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+  ████████████████████████████▌   95%
+Successfully installed. Restart the application to complete the upgrade.
+
+(6/6) Found Windows Subsystem for Linux [Microsoft.WSL] Version 2.7.13
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+  ██████████████████████████████  100%
+Successfully installed
+Notes: If the virtual machine platform Windows optional feature was enabled, a restart is required for WSL to function p
+roperly.
+Proceso finalizado correctamente.
+**********************
+Windows PowerShell transcript end
+End time: 20260905221238
+**********************

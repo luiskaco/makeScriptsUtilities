@@ -1,0 +1,33 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260906174405
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 17976
+PSVersion: 5.1.26100.9278
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9278
+BuildVersion: 10.0.26100.9278
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Iniciando bÃºsqueda de actualizaciones...
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+  ██████████████████████████████  100%
+Done
+Updating source: winget-font...
+Done
+No installed package found matching input criteria.
+Proceso finalizado correctamente.
+**********************
+Windows PowerShell transcript end
+End time: 20260906174419
+**********************

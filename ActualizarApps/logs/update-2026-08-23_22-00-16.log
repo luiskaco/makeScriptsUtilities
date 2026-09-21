@@ -1,0 +1,53 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260823220017
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 39460
+PSVersion: 5.1.26100.9168
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9168
+BuildVersion: 10.0.26100.9168
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Iniciando bÃºsqueda de actualizaciones...
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+Done
+Updating source: winget-font...
+Done
+Name                        Id                   Version  Available Source
+--------------------------------------------------------------------------
+LM Studio 0.4.20+1          ElementLabs.LMStudio 0.4.20+1 0.4.21+2  winget
+Windows Subsystem for Linux Microsoft.WSL        2.7.11.0 2.7.12    winget
+2 upgrades available.
+
+(1/2) Found LM Studio [ElementLabs.LMStudio] Version 0.4.21+2
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+Installer failed with exit code: 2
+
+(2/2) Found Windows Subsystem for Linux [Microsoft.WSL] Version 2.7.12
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+  ██████████████████████████████  100%
+Successfully installed
+Notes: If the virtual machine platform Windows optional feature was enabled, a restart is required for WSL to function p
+roperly.
+winget terminÃ³ con cÃ³digo -1978335188. Revisa el log: D:\Script\logs\update-2026-08-23_22-00-16.log
+**********************
+Windows PowerShell transcript end
+End time: 20260823220041
+**********************

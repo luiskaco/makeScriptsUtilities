@@ -1,0 +1,64 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260916072709
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 18860
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+① Actualizando repositorio de fuentes
+────────────────────────────────────────────────────────────────
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+  ██████████████████████████████  100%
+Done
+Updating source: winget-font...
+Done
+
+② Revisando aplicaciones con actualización pendiente
+────────────────────────────────────────────────────────────────
+  Se encontraron 6 aplicación(es) con actualización disponible:
+
+  Aplicación                Actual        Disponible
+  ──────────────────────────────────────────────────────
+  Antigravity 2.13.0        2.13.0        2.14.0
+  CPUID HWMonitor 1.67      1.67          1.68
+  Docker Desktop            4.90.0        4.91.0
+  Google Chrome             153.0.8010.37  153.0.8010.48
+  OpenCode 1.18.30          1.18.30       1.18.31
+  Oracle VirtualBox 7.2.16  7.2.16        7.2.18
+
+
+③ Aplicando actualizaciones
+────────────────────────────────────────────────────────────────
+  ✔ Antigravity 2.13.0             (01:49)
+  ✔ CPUID HWMonitor 1.67           (00:08)
+  ✔ Docker Desktop                 (02:01)
+  ✔ Google Chrome                  (04:19)
+  ✔ OpenCode 1.18.30               (00:33)
+  ✔ Oracle VirtualBox 7.2.16       (05:27)
+
+╔══════════════════════════════════════════════════════════════╗
+║  ✔ PROCESO FINALIZADO CORRECTAMENTE                          ║
+║  6 aplicación(es) actualizada(s) con éxito.                  ║
+║  Tiempo total: 14:26                                         ║
+║  Log: D:\Script\logs\update-2026-09-16_07-27-09.log          ║
+╚══════════════════════════════════════════════════════════════╝
+
+**********************
+Windows PowerShell transcript end
+End time: 20260916074135
+**********************

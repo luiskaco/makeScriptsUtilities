@@ -1,0 +1,126 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260902225719
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 19000
+PSVersion: 5.1.26100.9168
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9168
+BuildVersion: 10.0.26100.9168
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Iniciando bÃºsqueda de actualizaciones...
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+  ██████████████████████████████  100%
+Done
+Updating source: winget-font...
+Done
+Name                                   Id                         Version     Available Source
+----------------------------------------------------------------------------------------------
+Claude                                 Anthropic.Claude           1.40609.0.0 1.40609.1 winget
+cloudflared                            Cloudflare.cloudflared     2026.8.2    2026.8.3  winget
+Docker Desktop                         Docker.DockerDesktop       4.87.0      4.89.0    winget
+LM Studio 0.4.20+1                     ElementLabs.LMStudio       0.4.20+1    0.4.23+1  winget
+Microsoft Visual Studio Code (User)    Microsoft.VisualStudioCode 1.134.0     1.136.0   winget
+NVIDIA PhysX System Software 9.23.1019 Nvidia.PhysX               9.23.1019   9.26.0703 winget
+Open Design                            Powerformer.OpenDesign     0.20.2      0.21.1    winget
+OpenCode 1.18.21                       SST.OpenCodeDesktop        1.18.21     1.18.27   winget
+Telegram Desktop                       Telegram.TelegramDesktop   7.1.1       7.1.4     winget
+9 upgrades available.
+
+(1/9) Found Docker Desktop [Docker.DockerDesktop] Version 4.89.0
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://desktop.docker.com/win/main/amd64/238018/Docker%20Desktop%20Installer.exe
+  ██████████████████████████████   595 MB /  595 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(2/9) Found NVIDIA PhysX System Software [Nvidia.PhysX] Version 9.26.0703
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://us.download.nvidia.com/Windows/9.26.0703/PhysX_9.26.0703_SystemSoftware.exe
+  ██████████████████████████████  33.3 MB / 33.3 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(3/9) Found cloudflared [Cloudflare.cloudflared] Version 2026.8.3
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/cloudflare/cloudflared/releases/download/2026.8.3/cloudflared-windows-amd64.msi
+  ██████████████████████████████  18.4 MB / 18.4 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(4/9) Found Open Design [Powerformer.OpenDesign] Version 0.21.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/nexu-io/open-design/releases/download/open-design-v0.21.1/open-design-0.21.1-win-x64-setu
+p.exe
+  ██████████████████████████████   399 MB /  399 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(5/9) Found LM Studio [ElementLabs.LMStudio] Version 0.4.23+1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://installers.lmstudio.ai/win32/x64/0.4.23-1/LM-Studio-0.4.23-1-x64.exe
+  ██████████████████████████████   587 MB /  587 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(6/9) Found OpenCode [SST.OpenCodeDesktop] Version 1.18.27
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/anomalyco/opencode/releases/download/v1.18.27/opencode-desktop-win-x64.exe
+  ██████████████████████████████   120 MB /  120 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(7/9) Found Telegram Desktop [Telegram.TelegramDesktop] Version 7.1.4
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://github.com/telegramdesktop/tdesktop/releases/download/v7.1.4/tsetup-x64.7.1.4.exe
+  ██████████████████████████████  52.8 MB / 52.8 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(8/9) Found Microsoft Visual Studio Code [Microsoft.VisualStudioCode] Version 1.136.0
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://vscode.download.prss.microsoft.com/dbazure/download/stable/520fb30b2d3d324b4cb2342f6e88e2cd93751de1/
+VSCodeUserSetup-x64-1.136.0.exe
+  ██████████████████████████████   229 MB /  229 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed
+
+(9/9) Found Claude [Anthropic.Claude] Version 1.40609.1
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Successfully verified installer hash
+Starting package install...
+  ████████████████████████████▌   95%
+Successfully installed. Restart the application to complete the upgrade.
+Proceso finalizado correctamente.
+**********************
+Windows PowerShell transcript end
+End time: 20260902230629
+**********************

@@ -1,0 +1,118 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260920212829
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File D:\Script\InfoEquipo\InfoEquipo.ps1 -ErrorAction Continue
+Process ID: 17852
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+① Procesador (CPU)
+────────────────────────────────────────────────────────────────
+  Nombre:                AMD Ryzen 7 260 w/ Radeon 780M Graphics
+  Fabricante:            AuthenticAMD
+  Núcleos / Hilos:       8 núcleos / 16 hilos
+  Velocidad base:        3801 MHz
+  Socket:                FP8
+
+② Tarjeta gráfica (GPU)
+────────────────────────────────────────────────────────────────
+  Nombre:                AMD Radeon(TM) 780M Graphics
+  Memoria dedicada:      512 MB
+  Resolución actual:     2560 x 1600
+  Versión de driver:     32.0.21030.13004
+
+  Nombre:                NVIDIA GeForce RTX 5060 Laptop GPU
+  Memoria dedicada:      4.0 GB
+  Resolución actual:      x
+  Versión de driver:     32.0.16.1664
+
+
+③ Memoria RAM
+────────────────────────────────────────────────────────────────
+  Módulo 1:              24.0 GB - 5600 MHz - Micron Technology (CT24G56C46S5.M8B1)
+  Módulo 2:              24.0 GB - 5600 MHz - Micron Technology (CT24G56C46S5.M8B1)
+
+  Total instalado:       48.0 GB
+
+④ Almacenamiento (Disco)
+────────────────────────────────────────────────────────────────
+  Modelo:                CT2000T500SSD8
+  Interfaz / Tipo:       SCSI - Fixed hard disk media
+  Capacidad:             1,863.0 GB
+
+  Modelo:                WD PC SN7100S SDFPMSL-512G-1101
+  Interfaz / Tipo:       SCSI - Fixed hard disk media
+  Capacidad:             476.9 GB
+
+  Unidad C::             98.1 GB libres de 474.7 GB (21% libre)
+  Unidad D::             1,041.6 GB libres de 1,863.0 GB (56% libre)
+  Unidad H::             93.2 GB libres de 474.7 GB (20% libre)
+
+⑤ Red
+────────────────────────────────────────────────────────────────
+  Adaptador:             MediaTek Wi-Fi 7 MT7925 Wireless LAN Card
+  IP:                    192.168.1.25
+  Velocidad enlace:      2.2 GB
+
+  Adaptador:             VirtualBox Host-Only Ethernet Adapter
+  IP:                    192.168.56.1
+  Velocidad enlace:      954 MB
+
+
+⑥ Monitor(es)
+────────────────────────────────────────────────────────────────
+  Fabricante:            EDO
+  Modelo:                N/D
+  Serie:                 0
+
+
+⑦ Sistema Operativo
+────────────────────────────────────────────────────────────────
+  Nombre:                Microsoft Windows 11 Home
+  Versión / Build:       10.0.26200 (Build 26200)
+  Arquitectura:          64-bit
+  Fecha instalación:     04/19/2026 19:31:46
+  Último arranque:       09/18/2026 23:18:38
+
+⑧ Placa base (Motherboard)
+────────────────────────────────────────────────────────────────
+  Fabricante:            LENOVO
+  Modelo:                LNVNB161216
+  Número de serie:       PF5RBRT4
+  Versión BIOS:          RGCN34WW
+  Fecha BIOS:            12/10/2025 19:00:00
+
+⑨ Fuente de poder (PSU) / Batería
+────────────────────────────────────────────────────────────────
+  Batería detectada:     L24M4PC0
+  Estado:                OK
+  Carga estimada:        80%
+
+  ℹ Este equipo tiene batería (portátil): no aplica fuente de poder ATX.
+
+⑩ Temperatura
+────────────────────────────────────────────────────────────────
+  No disponible: este equipo no expone temperatura por ACPI/WMI estándar.
+  Para verla en tiempo real, usá HWiNFO o LibreHardwareMonitor
+  (no se instalan automáticamente desde este script).
+
+════════════════════════════════════════════════════════════════
+  ✔ Reporte generado. Log guardado en:
+  D:\Script\InfoEquipo\logs\infoequipo-2026-09-20_21-28-29.log
+════════════════════════════════════════════════════════════════
+
+**********************
+Windows PowerShell transcript end
+End time: 20260920212832
+**********************

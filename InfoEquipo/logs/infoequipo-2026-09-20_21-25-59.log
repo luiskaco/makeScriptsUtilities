@@ -1,0 +1,72 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260920212559
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: powershell -NoProfile -ExecutionPolicy Bypass -File D:\Script\InfoEquipo\InfoEquipo.ps1
+Process ID: 4396
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+① Procesador (CPU)
+────────────────────────────────────────────────────────────────
+  Nombre:                AMD Ryzen 7 260 w/ Radeon 780M Graphics
+  Fabricante:            AuthenticAMD
+  Núcleos / Hilos:       8 núcleos / 16 hilos
+  Velocidad base:        3801 MHz
+  Socket:                FP8
+
+② Tarjeta gráfica (GPU)
+────────────────────────────────────────────────────────────────
+  Nombre:                AMD Radeon(TM) 780M Graphics
+  Memoria dedicada:      512 MB
+  Resolución actual:     2560 x 1600
+  Versión de driver:     32.0.21030.13004
+
+  Nombre:                NVIDIA GeForce RTX 5060 Laptop GPU
+  Memoria dedicada:      4.0 GB
+  Resolución actual:      x
+  Versión de driver:     32.0.16.1664
+
+
+③ Memoria RAM
+────────────────────────────────────────────────────────────────
+  Módulo 1:              24.0 GB - 5600 MHz - Micron Technology (CT24G56C46S5.M8B1)
+  Módulo 2:              24.0 GB - 5600 MHz - Micron Technology (CT24G56C46S5.M8B1)
+
+  Total instalado:       48.0 GB
+
+④ Placa base (Motherboard)
+────────────────────────────────────────────────────────────────
+  Fabricante:            LENOVO
+  Modelo:                LNVNB161216
+  Número de serie:       PF5RBRT4
+  Versión BIOS:          RGCN34WW
+  Fecha BIOS:            12/10/2025 19:00:00
+
+⑤ Fuente de poder (PSU)
+────────────────────────────────────────────────────────────────
+  Batería detectada:     L24M4PC0
+  Estado:                OK
+  Carga estimada:        80%
+
+  ℹ Este equipo tiene batería (portátil): no aplica fuente de poder ATX.
+
+════════════════════════════════════════════════════════════════
+  ✔ Reporte generado. Log guardado en:
+  D:\Script\InfoEquipo\logs\infoequipo-2026-09-20_21-25-59.log
+════════════════════════════════════════════════════════════════
+
+**********************
+Windows PowerShell transcript end
+End time: 20260920212601
+**********************

@@ -1,0 +1,44 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260907001256
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File D:\Script\updateScripts.ps1
+Process ID: 1252
+PSVersion: 5.1.26100.9278
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9278
+BuildVersion: 10.0.26100.9278
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+① Actualizando repositorio de fuentes
+────────────────────────────────────────────────────────────────
+Updating all sources...
+Updating source: msstore...
+Done
+Updating source: winget...
+Done
+Updating source: winget-font...
+Done
+
+② Revisando aplicaciones con actualización pendiente
+────────────────────────────────────────────────────────────────
+  ✔ No hay aplicaciones pendientes de actualizar.
+
+╔══════════════════════════════════════════════════════════════╗
+║  ✔ PROCESO FINALIZADO CORRECTAMENTE                          ║
+║  No había actualizaciones pendientes.                        ║
+║  Tiempo total: 00:04                                         ║
+║  Log: D:\Script\logs\update-2026-09-07_00-12-56.log          ║
+╚══════════════════════════════════════════════════════════════╝
+
+**********************
+Windows PowerShell transcript end
+End time: 20260907001301
+**********************

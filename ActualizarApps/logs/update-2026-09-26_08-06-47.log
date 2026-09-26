@@ -1,0 +1,58 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260926080647
+Username: KACOLEGION\luisk
+RunAs User: KACOLEGION\luisk
+Configuration Name: 
+Machine: KACOLEGION (Microsoft Windows NT 6.2.9200.0)
+Host Application: D:\Script\ActualizarApps\ActualizarApps.exe
+Process ID: 42956
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+① Actualizando repositorio de fuentes
+────────────────────────────────────────────────────────────────
+
+② Revisando aplicaciones con actualización pendiente
+────────────────────────────────────────────────────────────────
+  Se encontraron 1 aplicación(es) con actualización disponible:
+
+  Aplicación       Actual        Disponible
+  ─────────────────────────────────────────────
+  Microsoft Edge   153.0.4234.48  154.0.4258.37
+
+
+③ Aplicando actualizaciones
+────────────────────────────────────────────────────────────────
+  ✖ Microsoft Edge                 tecnología de instalación distinta a la actual — desinstalar y reinstalar a mano
+
+④ Navegadores no cubiertos por el listado general
+────────────────────────────────────────────────────────────────
+  No hay navegadores adicionales que revisar por esta vía.
+
+⑤ Verificando driver de NVIDIA
+────────────────────────────────────────────────────────────────
+  ✔ Driver NVIDIA al día (617.14)
+
+⚠ Aplicaciones con errores
+────────────────────────────────────────────────────────────────
+  ✖ Microsoft Edge                 tecnología de instalación distinta a la actual — desinstalar y reinstalar a mano
+
+╔══════════════════════════════════════════════════════════════╗
+║  ⚠ PROCESO FINALIZADO CON AVISOS                             ║
+║  1 de 1 fallaron.                                            ║
+║  Tiempo total: 00:08                                         ║
+║  Log: D:\Script\ActualizarApps\logs\update-2026-09-26_08-06-47.log║
+╚══════════════════════════════════════════════════════════════╝
+
+**********************
+Windows PowerShell transcript end
+End time: 20260926080656
+**********************

@@ -1,0 +1,15 @@
+# Logs
+logs/
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Backups
+Respaldo_Usuario/

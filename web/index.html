@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orange Latam — Centro de Control y Utilidades Windows</title>
+  <meta name="description" content="Panel web de administración y diagnóstico para servicios, hardware y mantenimiento en Windows.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- TOP NAVIGATION BAR -->
+    <header class="navbar" id="main-navbar">
+      <div class="navbar-brand">
+        <div class="brand-logo" id="brand-logo">
+          <span class="logo-icon">⚡</span>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-title">ORANGE LATAM</h1>
+          <span class="brand-subtitle">Centro de Control & Utilidades Windows</span>
+        </div>
+      </div>
+
+      <div class="navbar-status">
+        <div class="status-pill admin-pill" id="admin-status-pill">
+          <span class="status-dot pulsing"></span>
+          <span class="status-text" id="admin-status-text">Verificando UAC...</span>
+        </div>
+        <div class="status-pill host-pill" id="host-pill">
+          <span class="host-icon">💻</span>
+          <span class="host-text" id="host-text">Localhost</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="nav-tabs" id="nav-tabs">
+      <button class="tab-btn active" id="tab-btn-services" data-tab="tab-services">
+        <span class="tab-icon">🔄</span>
+        <span class="tab-label">Reinicio de Servicios</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-hardware" data-tab="tab-hardware">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Info del Equipo</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-updater" data-tab="tab-updater">
+        <span class="tab-icon">🚀</span>
+        <span class="tab-label">Actualizar Apps</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-cleaner" data-tab="tab-cleaner">
+        <span class="tab-icon">🧹</span>
+        <span class="tab-label">Limpiar Perfil</span>
+      </button>
+    </nav>
+
+    <!-- MAIN CONTENT GRID -->
+    <main class="main-content" id="main-content">
+      <div class="dashboard-grid">
+        
+        <!-- LEFT PANEL: ACTIVE TAB CONTENT -->
+        <section class="action-panel" id="action-panel">
+          
+          <!-- TAB 1: REINICIO DE SERVICIOS -->
+          <div class="tab-pane active" id="tab-services">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Reinicio Rápido de Servicios</h2>
+                <p class="section-desc">Soluciona fallos comunes reiniciando subsistemas y servicios de red, audio o impresión.</p>
+              </div>
+              <button class="btn btn-accent" id="btn-action-all">
+                <span class="btn-icon">⚡</span>
+                <span class="btn-text">Mantenimiento General</span>
+              </button>
+            </div>
+
+            <div class="cards-grid">
+              <!-- Card 1: Explorador -->
+              <div class="service-card" id="card-explorer">
+                <div class="card-icon-wrap icon-blue">
+                  <span>📁</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title-row">
+                    <h3 class="card-title">Explorador de Windows</h3>
+                    <span class="badge badge-system">explorer.exe</span>
+                  </div>
+                  <p class="card-desc">Cierra y reinicia el proceso del shell para refrescar la barra de tareas, escritorio y explorador de archivos.</p>
+                </div>
+                <div class="card-footer">
+                  <button class="btn btn-primary btn-service" id="btn-action-explorer" data-action="explorer">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reiniciar</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 2: Red y Wi-Fi -->
+              <div class="service-card" id="card-wifi">
+                <div class="card-icon-wrap icon-cyan">
+                  <span>📶</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title-row">
+                    <h3 class="card-title">Red y Wi-Fi</h3>
+                    <span class="badge badge-network">DNS / DHCP</span>
+                  </div>
+                  <p class="card-desc">Reinicia el adaptador Wi-Fi, vacía la caché DNS (flushdns) y solicita una nueva IP por DHCP (renew).</p>
+                </div>
+                <div class="card-footer">
+                  <button class="btn btn-primary btn-service" id="btn-action-wifi" data-action="wifi">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reiniciar Red</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 3: Cola de Impresión -->
+              <div class="service-card" id="card-spooler">
+                <div class="card-icon-wrap icon-amber">
+                  <span>🖨️</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title-row">
+                    <h3 class="card-title">Cola de Impresión</h3>
+                    <span class="badge badge-service">Spooler</span>
+                  </div>
+                  <p class="card-desc">Detiene e inicia el servicio de cola de impresión para desbloquear trabajos atascados en impresoras.</p>
+                </div>
+                <div class="card-footer">
+                  <button class="btn btn-primary btn-service" id="btn-action-spooler" data-action="spooler">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reiniciar Spooler</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 4: Audio -->
+              <div class="service-card" id="card-audio">
+                <div class="card-icon-wrap icon-purple">
+                  <span>🔊</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title-row">
+                    <h3 class="card-title">Servicios de Audio</h3>
+                    <span class="badge badge-service">Audiosrv</span>
+                  </div>
+                  <p class="card-desc">Reinicia los servicios Audiosrv y AudioEndpointBuilder para recuperar el sonido si se corta o no detecta salidas.</p>
+                </div>
+                <div class="card-footer">
+                  <button class="btn btn-primary btn-service" id="btn-action-audio" data-action="audio">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reiniciar Audio</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card 5: Windows Update -->
+              <div class="service-card" id="card-update">
+                <div class="card-icon-wrap icon-green">
+                  <span>🔄</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-title-row">
+                    <h3 class="card-title">Windows Update</h3>
+                    <span class="badge badge-service">wuauserv</span>
+                  </div>
+                  <p class="card-desc">Reinicia el servicio de actualizaciones de Windows para desbloquear descargas o análisis colgados.</p>
+                </div>
+                <div class="card-footer">
+                  <button class="btn btn-primary btn-service" id="btn-action-update" data-action="update">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Reiniciar Update</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: INFO DEL EQUIPO -->
+          <div class="tab-pane" id="tab-hardware">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Auditoría de Hardware & Sistema</h2>
+                <p class="section-desc">Métricas extraídas en tiempo real a través de consultas WMI y CIM de Windows.</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-refresh-hardware">
+                <span class="btn-icon">📊</span>
+                <span class="btn-text">Escanear Ahora</span>
+              </button>
+            </div>
+
+            <div class="hardware-grid" id="hardware-cards-container">
+              <div class="hw-card" id="hw-cpu">
+                <div class="hw-card-header">
+                  <span class="hw-icon">🧠</span>
+                  <h4 class="hw-title">Procesador (CPU)</h4>
+                </div>
+                <div class="hw-card-body" id="hw-cpu-content">
+                  <div class="hw-metric"><span class="hw-label">Modelo:</span> <span class="hw-val" id="hw-cpu-name">Haga clic en Escanear</span></div>
+                  <div class="hw-metric"><span class="hw-label">Núcleos:</span> <span class="hw-val" id="hw-cpu-cores">-</span></div>
+                </div>
+              </div>
+
+              <div class="hw-card" id="hw-ram">
+                <div class="hw-card-header">
+                  <span class="hw-icon">⚡</span>
+                  <h4 class="hw-title">Memoria RAM</h4>
+                </div>
+                <div class="hw-card-body" id="hw-ram-content">
+                  <div class="hw-metric"><span class="hw-label">Instalada:</span> <span class="hw-val" id="hw-ram-total">-</span></div>
+                  <div class="hw-metric"><span class="hw-label">Disponible:</span> <span class="hw-val" id="hw-ram-free">-</span></div>
+                </div>
+              </div>
+
+              <div class="hw-card" id="hw-disk">
+                <div class="hw-card-header">
+                  <span class="hw-icon">💾</span>
+                  <h4 class="hw-title">Almacenamiento</h4>
+                </div>
+                <div class="hw-card-body" id="hw-disk-content">
+                  <div class="hw-metric"><span class="hw-label">Disco Principal:</span> <span class="hw-val" id="hw-disk-model">-</span></div>
+                  <div class="hw-metric"><span class="hw-label">Espacio Libre C:</span> <span class="hw-val" id="hw-disk-free">-</span></div>
+                </div>
+              </div>
+
+              <div class="hw-card" id="hw-os">
+                <div class="hw-card-header">
+                  <span class="hw-icon">🪟</span>
+                  <h4 class="hw-title">Sistema Operativo</h4>
+                </div>
+                <div class="hw-card-body" id="hw-os-content">
+                  <div class="hw-metric"><span class="hw-label">Edición:</span> <span class="hw-val" id="hw-os-caption">-</span></div>
+                  <div class="hw-metric"><span class="hw-label">Compilación:</span> <span class="hw-val" id="hw-os-build">-</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: ACTUALIZADOR DE APLICACIONES -->
+          <div class="tab-pane" id="tab-updater">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Actualizador Masivo de Software</h2>
+                <p class="section-desc">Gestiona y actualiza todos los programas instalados mediante el repositorio oficial de Windows Package Manager (Winget).</p>
+              </div>
+            </div>
+
+            <div class="updater-box">
+              <div class="updater-info-banner">
+                <span class="banner-icon">📦</span>
+                <div>
+                  <h4>Gestión Centralizada con Winget</h4>
+                  <p>Escanea tu equipo en busca de nuevas versiones disponibles para tus navegadores, entornos de desarrollo y utilidades.</p>
+                </div>
+              </div>
+              <div class="updater-actions">
+                <button class="btn btn-primary" id="btn-check-upgrades">
+                  <span class="btn-icon">🔍</span>
+                  <span class="btn-text">Comprobar Actualizaciones</span>
+                </button>
+                <button class="btn btn-accent" id="btn-upgrade-all">
+                  <span class="btn-icon">🚀</span>
+                  <span class="btn-text">Actualizar Todo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 4: LIMPIEZA DE PERFIL -->
+          <div class="tab-pane" id="tab-cleaner">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Limpieza y Respaldo de Perfil</h2>
+                <p class="section-desc">Unifica y organiza carpetas de usuario (Escritorio, Descargas, Documentos) en un respaldo seguro y restaura el fondo oficial.</p>
+              </div>
+            </div>
+
+            <div class="cleaner-box">
+              <div class="cleaner-warning-card">
+                <span class="cleaner-icon">⚠️</span>
+                <div>
+                  <h4>¿Qué hace este proceso?</h4>
+                  <ul>
+                    <li>Mueve los archivos de <strong>Escritorio</strong>, <strong>Descargas</strong> y <strong>Documentos</strong> hacia <code>%USERPROFILE%\Desktop\Respaldo_Usuario</code> sin perder datos.</li>
+                    <li>Restablece el fondo de pantalla predeterminado de Windows en el Registro.</li>
+                    <li>Excluye archivos críticos del sistema como <code>desktop.ini</code>.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="cleaner-action-row">
+                <button class="btn btn-danger" id="btn-run-cleaner">
+                  <span class="btn-icon">🧹</span>
+                  <span class="btn-text">Ejecutar Limpieza y Respaldo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- RIGHT PANEL: REAL-TIME CONSOLE TERMINAL -->
+        <aside class="console-panel" id="console-panel">
+          <div class="terminal-header">
+            <div class="terminal-title-group">
+              <span class="terminal-dot red"></span>
+              <span class="terminal-dot yellow"></span>
+              <span class="terminal-dot green"></span>
+              <span class="terminal-title">CONSOLA DE EVENTOS EN VIVO</span>
+            </div>
+            <div class="terminal-controls">
+              <button class="btn-term" id="btn-clear-terminal" title="Limpiar Consola">Limpiar</button>
+              <button class="btn-term" id="btn-copy-terminal" title="Copiar al portapapeles">Copiar</button>
+            </div>
+          </div>
+
+          <!-- TERMINAL BODY -->
+          <div class="terminal-body" id="terminal-output">
+            <div class="terminal-line line-info">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-tag tag-info">[INFO]</span>
+              <span class="log-msg">Panel Web iniciado. Conectado al servicio local.</span>
+            </div>
+          </div>
+
+          <!-- TERMINAL FOOTER -->
+          <div class="terminal-footer">
+            <div class="term-status-indicator">
+              <span class="term-pulse-dot" id="term-pulse-dot"></span>
+              <span class="term-status-text" id="term-status-text">Listo para ejecutar acciones</span>
+            </div>
+            <label class="autoscroll-toggle">
+              <input type="checkbox" id="chk-autoscroll" checked>
+              <span>Auto-scroll</span>
+            </label>
+          </div>
+        </aside>
+
+      </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="main-footer" id="main-footer">
+      <div class="footer-left">
+        <span>Orange Latam Utilities • Suite v1.0.0</span>
+      </div>
+      <div class="footer-right">
+        <span id="footer-uptime">Servidor Local Activo</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -4,6 +4,51 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 
 ---
 
+## [1.2.0] - 2026-10-06
+
+### Añadido (Added)
+- **Aplicación de Escritorio Nativa (`AsistenciaOrange.ps1` y `AsistenciaOrange.bat`)**:
+  - Aplicación 100% nativa en Windows con WPF / XAML, sin necesidad de servidor web local, Node.js ni navegadores.
+  - Tarjeta Hero 1-Click *"Reparar Todo el Equipo"* con ejecución secuencial y barra de progreso fluida por pasos.
+  - 6 Tarjetas de síntomas: Audio/Micrófono, Internet/Wi-Fi, Impresora, Pantalla/Barra, Actualizar Programas (winget) y Limpieza de Perfil (Robocopy).
+  - Telemetría de hardware en tiempo real (CPU, RAM, Disco, IP, Usuario, SO).
+  - Panel de Feedback y Escalamiento a Soporte TI con generación automática de diagnóstico estructurado listo para copiar en Teams o enviar por correo.
+  - Consola técnica integrada colapsable con registro de logs en tiempo real, auto-scroll y botones de copiar/limpiar.
+- **ADR 006**: Registro de decisión arquitectónica sobre la migración a escritorio nativo puro.
+
+---
+
+## [1.1.1] - 2026-10-06
+
+### Añadido (Added)
+- **Tracking de Pasos en Vivo y Streaming en Consola y Web**:
+  - Consola de terminal (CMD / PowerShell / Node.js) con visualización estructurada por pasos `[Paso X/Y] (Z%)`, marcas de tiempo y colores ANSI.
+  - Streaming en tiempo real mediante Server-Sent Events (SSE) en `/api/action-stream/:action` en servidores Node.js (`server.js`) y PowerShell (`server.ps1`).
+  - Barra de progreso web con medidor fluido, badge de paso actual y porcentaje dinámico.
+  - Consola web integrada (`terminal-output`) con streaming de logs instantáneo en tiempo real.
+
+### Corregido (Fixed)
+- **Saturación por Telemetría Cíclica:** Eliminada la invocación automática de `loadTelemetry` en el bucle de heartbeat para evitar sobrecarga de procesos PowerShell/WMI cada 3.5s.
+- **Resolución de Host y Binding de Red:** Configuración de escucha dual IPv4 / IPv6 en `server.js` y prefijos dobles en `server.ps1` para garantizar conectividad transparente con `localhost` y `127.0.0.1`.
+- **Lanzador `.bat`:** Optimización del flujo de elevación UAC en `Abrir-Utilidad-Web.bat` para evitar cierres prematuros de ventana.
+
+---
+
+## [1.1.0] - 2026-10-06
+
+### Añadido (Added)
+- **Portal de Auto-Atención y Diagnóstico para Usuarios Finales**:
+  - Rediseño visual centrado en síntomas de uso cotidiano (Audio, Internet/Red, Impresora, Pantalla trabada, Actualización y Limpieza de perfil).
+  - Botón Hero *"Optimizar y Reparar mi Equipo"* para auto-reparación inteligente en 1 clic.
+  - Apertura en modo ventana de aplicación de escritorio (`--app` con Edge/Chrome) sin barras de navegación web.
+  - Flujo interactivo de feedback: consulta *"¿Se solucionó tu problema?"* al finalizar cualquier acción.
+  - Módulo de Escalamiento a Soporte TI: generación automática de reporte de diagnóstico estructurado listo para copiar en Teams o enviar por correo con 1 clic.
+  - Modal de confirmación con advertencias visuales para acciones de riesgo (Limpieza y Respaldo de Perfil).
+  - Panel colapsable de "Modo TI" con telemetría de hardware (CPU, RAM, Disco C:, IP) y consola terminal de logs en tiempo real.
+- **ADR 005**: Registro de decisión arquitectónica sobre el nuevo paradigma de interacción por síntomas y ventana tipo app.
+
+---
+
 ## [1.0.0] - 2026-10-06
 
 ### Añadido (Added)

@@ -1,272 +1,450 @@
 /* ==========================================================================
-   ORANGE LATAM — WEB DASHBOARD LOGIC (app.js)
-   Handles UI interactions, API calls to local server, and live log updates.
+   ASISTENCIA ORANGE — CONTROLADOR DE USUARIO (app.js)
+   Tracking en tiempo real de pasos, logs, auto-reconexión y detección de servidor.
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  let apiBase = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:5050';
+  let isConnected = false;
+
   // DOM Elements
-  const tabButtons = document.querySelectorAll('.tab-btn');
-  const tabPanes = document.querySelectorAll('.tab-pane');
+  const statusIndicator = document.getElementById('status-indicator');
+  const statusLabel = document.getElementById('status-label');
+
+  const btnActionAll = document.getElementById('btn-action-all');
+  const actionTiles = document.querySelectorAll('.action-tile');
+
+  const globalProgress = document.getElementById('global-progress');
+  const progressName = document.getElementById('progress-name');
+  const progressStep = document.getElementById('progress-step');
+  const progressStepBadge = document.getElementById('progress-step-badge');
+  const progressPercent = document.getElementById('progress-percent');
+  const progressBarFill = document.getElementById('progress-bar-fill');
+
+  const resultBanner = document.getElementById('result-banner');
+  const resultTitle = document.getElementById('result-title');
+  const resultDesc = document.getElementById('result-desc');
+  const resultActions = document.getElementById('result-actions');
+  const resultThanks = document.getElementById('result-thanks');
+  const btnFeedbackYes = document.getElementById('btn-feedback-yes');
+  const btnFeedbackNo = document.getElementById('btn-feedback-no');
+  const btnCloseBanner = document.getElementById('btn-close-banner');
+
+  const supportCard = document.getElementById('support-card');
+  const supportReportText = document.getElementById('support-report-text');
+  const btnCopySupport = document.getElementById('btn-copy-support');
+  const copySupportText = document.getElementById('copy-support-text');
+  const btnMailSupport = document.getElementById('btn-mail-support');
+  const btnTeamsSupport = document.getElementById('btn-teams-support');
+
+  const cleanerModal = document.getElementById('cleaner-modal');
+  const btnOpenCleaner = document.getElementById('btn-open-cleaner-modal');
+  const btnModalBack = document.getElementById('btn-modal-back');
+  const btnModalOk = document.getElementById('btn-modal-ok');
+
+  const btnToggleAdvanced = document.getElementById('btn-toggle-advanced');
+  const advancedPanel = document.getElementById('advanced-panel');
   const terminalOutput = document.getElementById('terminal-output');
   const btnClearTerminal = document.getElementById('btn-clear-terminal');
-  const btnCopyTerminal = document.getElementById('btn-copy-terminal');
-  const chkAutoscroll = document.getElementById('chk-autoscroll');
-  const termPulseDot = document.getElementById('term-pulse-dot');
-  const termStatusText = document.getElementById('term-status-text');
-  const adminStatusText = document.getElementById('admin-status-text');
-  const hostText = document.getElementById('host-text');
 
-  // Service Action Buttons
-  const serviceButtons = document.querySelectorAll('.btn-service');
-  const btnActionAll = document.getElementById('btn-action-all');
-  const btnRefreshHardware = document.getElementById('btn-refresh-hardware');
-  const btnCheckUpgrades = document.getElementById('btn-check-upgrades');
-  const btnUpgradeAll = document.getElementById('btn-upgrade-all');
-  const btnRunCleaner = document.getElementById('btn-run-cleaner');
+  const hwPcName = document.getElementById('hw-pc-name');
+  const hwUserName = document.getElementById('hw-user-name');
+  const hwIp = document.getElementById('hw-ip');
+  const hwRam = document.getElementById('hw-ram');
 
-  // 1. Tab Navigation
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.dataset.tab;
-      
-      tabButtons.forEach(b => b.classList.remove('active'));
-      tabPanes.forEach(p => p.classList.remove('active'));
+  let isRunning = false;
+  let lastActionTitle = '';
+  let activeEventSource = null;
 
-      btn.classList.add('active');
-      const targetPane = document.getElementById(targetId);
-      if (targetPane) {
-        targetPane.classList.add('active');
-      }
+  // ==========================================================================
+  // 1. INICIALIZAR Y AUTO-DETECTAR SERVIDOR LOCAL (Detección de puertos y reconexión)
+  // ==========================================================================
+  const candidateUrls = [
+    apiBase,
+    'http://localhost:5050',
+    'http://127.0.0.1:5050',
+    'http://localhost:5051',
+    'http://127.0.0.1:5051'
+  ];
 
-      // If hardware tab activated and not scanned, trigger scan
-      if (targetId === 'tab-hardware' && document.getElementById('hw-cpu-name').textContent.includes('Escanear')) {
-        fetchHardwareInfo();
-      }
-    });
-  });
-
-  // 2. Logging Utility
-  function appendLog(message, type = 'INFO') {
-    const timeStr = new Date().toLocaleTimeString('es-ES', { hour12: false });
-    const line = document.createElement('div');
-    line.className = `terminal-line line-${type.toLowerCase()}`;
-
-    let tagClass = 'tag-info';
-    let tagText = '[INFO]';
-
-    switch (type.toUpperCase()) {
-      case 'OK':
-      case 'SUCCESS':
-        tagClass = 'tag-ok';
-        tagText = '[✓ OK]';
-        break;
-      case 'WARN':
-      case 'WARNING':
-        tagClass = 'tag-warn';
-        tagText = '[! ADVERTENCIA]';
-        break;
-      case 'ERR':
-      case 'ERROR':
-        tagClass = 'tag-err';
-        tagText = '[✕ ERROR]';
-        break;
-      default:
-        tagClass = 'tag-info';
-        tagText = '[i INFO]';
-    }
-
-    line.innerHTML = `
-      <span class="log-time">[${timeStr}]</span>
-      <span class="log-tag ${tagClass}">${tagText}</span>
-      <span class="log-msg">${escapeHtml(message)}</span>
-    `;
-
-    terminalOutput.appendChild(line);
-
-    if (chkAutoscroll.checked) {
-      terminalOutput.scrollTop = terminalOutput.scrollHeight;
-    }
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // 3. Status indicator helper
-  function setExecutionStatus(isBusy, message = 'Listo para operar') {
-    if (isBusy) {
-      termPulseDot.className = 'term-pulse-dot busy';
-      termStatusText.textContent = message;
-      document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
-    } else {
-      termPulseDot.className = 'term-pulse-dot';
-      termStatusText.textContent = message;
-      document.querySelectorAll('.btn').forEach(btn => btn.disabled = false);
-    }
-  }
-
-  // 4. Generic API Action Invoker
-  async function invokeAction(endpoint, actionName) {
-    setExecutionStatus(true, `Ejecutando: ${actionName}...`);
-    appendLog(`Iniciando acción: ${actionName}`, 'INFO');
-
+  async function tryConnect(url) {
     try {
-      const response = await fetch(`/api/action/${endpoint}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch(`${url}/api/status`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, data, url };
+      }
+    } catch (e) {}
+    return { ok: false };
+  }
+
+  async function checkHealth() {
+    let connected = false;
+
+    // Probar candidatos hasta encontrar el servidor activo
+    for (const url of candidateUrls) {
+      const res = await tryConnect(url);
+      if (res.ok) {
+        apiBase = res.url;
+        connected = true;
+        if (!isConnected) {
+          logEvent(`Conectado al servidor local en ${apiBase} (Equipo: ${res.data.hostName || 'PC'})`, 'ok');
+        }
+        isConnected = true;
+        statusIndicator.className = 'status-indicator online';
+        statusLabel.textContent = 'En línea';
+        if (hwPcName) hwPcName.textContent = res.data.hostName || 'PC';
+        if (hwUserName) hwUserName.textContent = res.data.userName || 'Usuario';
+        break;
+      }
+    }
+
+    if (!connected) {
+      if (isConnected) {
+        statusIndicator.className = 'status-indicator offline';
+        statusLabel.textContent = 'Sin conexión';
+        logEvent('Se perdió la conexión con el servidor local. Reintentando...', 'err');
+      } else {
+        statusIndicator.className = 'status-indicator offline';
+        statusLabel.textContent = 'Sin conexión';
+      }
+      isConnected = false;
+    }
+  }
+
+  // Polling automático cada 3 segundos si está desconectado o cada 10s si está conectado
+  setInterval(() => {
+    checkHealth();
+  }, 3500);
+
+  async function loadTelemetry() {
+    if (!isConnected) return;
+    try {
+      const res = await fetch(`${apiBase}/api/action/info`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.info) {
+          if (hwIp && data.info.network) hwIp.textContent = data.info.network.ip || '-';
+          if (hwRam && data.info.ram) hwRam.textContent = data.info.ram.total || '-';
+        }
+      }
+    } catch (e) {}
+  }
+
+  // ==========================================================================
+  // 2. EJECUCIÓN DE ACCIONES CON STREAMING EN TIEMPO REAL
+  // ==========================================================================
+  function runAction(actionKey, actionTitle, element = null) {
+    if (isRunning) return;
+
+    if (!isConnected) {
+      logEvent(`✕ No se puede ejecutar '${actionTitle}': Servidor local desconectado.`, 'err');
+      logEvent(`💡 Inicia el servidor ejecutando el archivo 'Abrir-Utilidad-Web.bat' como Administrador.`, 'warn');
+      showResult(false, actionTitle, 'El servidor local no está iniciado. Ejecuta el archivo "Abrir-Utilidad-Web.bat" en la carpeta principal como Administrador para habilitar las reparaciones.');
+      return;
+    }
+
+    isRunning = true;
+    lastActionTitle = actionTitle;
+
+    // Ocultar resultados previos
+    resultBanner.classList.add('hidden');
+    supportCard.classList.add('hidden');
+
+    // Inicializar barra de progreso
+    if (progressName) progressName.textContent = actionTitle;
+    if (progressStepBadge) progressStepBadge.textContent = 'Iniciando...';
+    if (progressStep) progressStep.textContent = 'Preparando entorno de Windows...';
+    if (progressPercent) progressPercent.textContent = '5%';
+    if (progressBarFill) progressBarFill.style.width = '5%';
+
+    globalProgress.classList.remove('hidden');
+    globalProgress.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    if (element) element.classList.add('is-running');
+    logEvent(`▶ Solicitando: ${actionTitle}...`, 'info');
+
+    // Conexión vía Server-Sent Events (SSE) para progreso y logs en tiempo real
+    try {
+      if (activeEventSource) {
+        activeEventSource.close();
+      }
+
+      const streamUrl = `${apiBase}/api/action-stream/${actionKey}`;
+      activeEventSource = new EventSource(streamUrl);
+
+      activeEventSource.addEventListener('connected', () => {
+        logEvent(`Conexión de telemetría en vivo establecida.`, 'info');
+      });
+
+      activeEventSource.addEventListener('step', (e) => {
+        try {
+          const stepData = JSON.parse(e.data);
+          if (progressStepBadge) progressStepBadge.textContent = `Paso ${stepData.step} de ${stepData.total}`;
+          if (progressStep) progressStep.textContent = stepData.label;
+          if (progressPercent) progressPercent.textContent = `${stepData.percent}%`;
+          if (progressBarFill) progressBarFill.style.width = `${stepData.percent}%`;
+        } catch (err) {}
+      });
+
+      activeEventSource.addEventListener('log', (e) => {
+        try {
+          const logData = JSON.parse(e.data);
+          const typeClass = logData.type === 'OK' ? 'ok' : logData.type === 'ERROR' ? 'err' : logData.type === 'WARN' ? 'warn' : 'info';
+          logEvent(logData.msg, typeClass);
+        } catch (err) {}
+      });
+
+      activeEventSource.addEventListener('complete', (e) => {
+        activeEventSource.close();
+        activeEventSource = null;
+
+        try {
+          const resData = JSON.parse(e.data);
+          if (progressBarFill) progressBarFill.style.width = '100%';
+          if (progressPercent) progressPercent.textContent = '100%';
+          if (progressStep) progressStep.textContent = '¡Completado con éxito!';
+
+          setTimeout(() => {
+            globalProgress.classList.add('hidden');
+            if (resData.success) {
+              logEvent(`✓ ${actionTitle} finalizado exitosamente.`, 'ok');
+              showResult(true, actionTitle);
+            } else {
+              logEvent(`✕ Fallo en ${actionTitle}: ${resData.error || 'Error'}`, 'err');
+              showResult(false, actionTitle, resData.error);
+            }
+            isRunning = false;
+            if (element) element.classList.remove('is-running');
+          }, 350);
+        } catch (err) {
+          globalProgress.classList.add('hidden');
+          showResult(true, actionTitle);
+          isRunning = false;
+          if (element) element.classList.remove('is-running');
+        }
+      });
+
+      activeEventSource.onerror = (err) => {
+        // Fallback a POST tradicional si SSE se interrumpe
+        if (activeEventSource) {
+          activeEventSource.close();
+          activeEventSource = null;
+        }
+        fallbackRunAction(actionKey, actionTitle, element);
+      };
+
+    } catch (e) {
+      fallbackRunAction(actionKey, actionTitle, element);
+    }
+  }
+
+  // Fallback tradicional vía POST si falla EventSource
+  async function fallbackRunAction(actionKey, actionTitle, element) {
+    try {
+      const res = await fetch(`${apiBase}/api/action/${actionKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
 
-      if (!response.ok) {
-        throw new Error(`Servidor respondió con código ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.logs && Array.isArray(data.logs)) {
-        data.logs.forEach(log => appendLog(log.msg, log.type || 'INFO'));
+        data.logs.forEach(l => logEvent(l.msg, l.type === 'OK' ? 'ok' : l.type === 'ERROR' ? 'err' : 'info'));
       }
 
-      if (data.success) {
-        appendLog(`Acción '${actionName}' finalizada con éxito.`, 'SUCCESS');
-        setExecutionStatus(false, `Listo — ${actionName} completado.`);
-      } else {
-        appendLog(`Acción falló: ${data.error || 'Error desconocido'}`, 'ERROR');
-        setExecutionStatus(false, `Error en ${actionName}`);
-      }
+      if (progressBarFill) progressBarFill.style.width = '100%';
+      if (progressPercent) progressPercent.textContent = '100%';
 
-      return data;
+      setTimeout(() => {
+        globalProgress.classList.add('hidden');
+        if (data.success) {
+          logEvent(`✓ ${actionTitle} finalizado.`, 'ok');
+          showResult(true, actionTitle);
+        } else {
+          logEvent(`✕ Fallo en ${actionTitle}: ${data.error || 'Error'}`, 'err');
+          showResult(false, actionTitle, data.error);
+        }
+        isRunning = false;
+        if (element) element.classList.remove('is-running');
+      }, 300);
+
     } catch (err) {
-      appendLog(`Error de conexión o ejecución: ${err.message}`, 'ERROR');
-      setExecutionStatus(false, `Error en ${actionName}`);
+      globalProgress.classList.add('hidden');
+      logEvent(`✕ Error de comunicación: ${err.message}`, 'err');
+      showResult(false, actionTitle, err.message);
+      isRunning = false;
+      if (element) element.classList.remove('is-running');
     }
   }
 
-  // 5. Wire up service buttons
-  serviceButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const action = btn.dataset.action;
-      const title = btn.closest('.service-card').querySelector('.card-title').textContent;
-      invokeAction(action, title);
-    });
-  });
+  // ==========================================================================
+  // 3. MOSTRAR RESULTADO Y SOPORTE
+  // ==========================================================================
+  function showResult(success, title, errorMsg = null) {
+    resultBanner.classList.remove('hidden');
+    resultActions.classList.remove('hidden');
+    resultThanks.classList.add('hidden');
 
+    if (success) {
+      resultTitle.textContent = '¡Listo! Tarea completada.';
+      resultDesc.textContent = `Hemos finalizado la reparación de: ${title}.`;
+    } else {
+      resultTitle.textContent = 'Requirió atención adicional.';
+      resultDesc.textContent = errorMsg ? `Detalle: ${errorMsg}` : 'Es posible que se requiera soporte técnico.';
+      openSupport();
+    }
+
+    resultBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function openSupport() {
+    supportCard.classList.remove('hidden');
+    supportReportText.textContent = 'Generando reporte de diagnóstico...';
+
+    try {
+      const res = await fetch(`${apiBase}/api/report`);
+      const data = await res.json();
+      const rep = data.report || {};
+
+      const report = 
+`=========================================
+  REPORTE ASISTENCIA TI - ORANGE LATAM
+=========================================
+Fecha:     ${rep.timestamp || new Date().toLocaleString()}
+Equipo:    ${rep.pcName || 'PC'}
+Usuario:   ${rep.userName || 'Usuario'}
+Windows:   ${rep.osName || 'Win 10/11'} (Build ${rep.osBuild || ''})
+IP:        ${rep.ipAddress || '-'}
+RAM:       ${rep.ramTotal || '-'}
+Problema:  ${lastActionTitle || 'Reparación'}
+=========================================`;
+
+      supportReportText.textContent = report;
+
+      const mailSubject = encodeURIComponent(`Soporte TI - ${rep.pcName || 'Equipo'} - ${lastActionTitle}`);
+      const mailBody = encodeURIComponent(`Hola Soporte TI,\n\nRequiero asistencia:\n\n${report}`);
+      btnMailSupport.href = `mailto:soporte@orangelatam.com?subject=${mailSubject}&body=${mailBody}`;
+
+    } catch (e) {
+      supportReportText.textContent = 'Error generando reporte.';
+    }
+
+    supportCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ==========================================================================
+  // 4. LOGGING EN CONSOLA AVANZADA
+  // ==========================================================================
+  function logEvent(msg, type = 'info') {
+    const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+    const row = document.createElement('div');
+    row.className = `log-row ${type}`;
+    row.textContent = `[${time}] ${msg}`;
+    
+    if (terminalOutput) {
+      terminalOutput.appendChild(row);
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+  }
+
+  // ==========================================================================
+  // 5. EVENT LISTENERS
+  // ==========================================================================
+
+  // Botón Principal 1-Click
   if (btnActionAll) {
     btnActionAll.addEventListener('click', () => {
-      invokeAction('all', 'Mantenimiento General de Servicios');
+      runAction(btnActionAll.dataset.action, btnActionAll.dataset.title, btnActionAll.closest('.hero-card'));
     });
   }
 
-  // 6. Hardware info loader
-  async function fetchHardwareInfo() {
-    setExecutionStatus(true, 'Escaneando hardware del equipo...');
-    appendLog('Consultando métricas de hardware mediante WMI/CIM...', 'INFO');
-
-    try {
-      const response = await fetch('/api/action/info', { method: 'POST' });
-      const data = await response.json();
-
-      if (data.success && data.info) {
-        const info = data.info;
-        
-        // CPU
-        if (info.cpu) {
-          document.getElementById('hw-cpu-name').textContent = info.cpu.name || '-';
-          document.getElementById('hw-cpu-cores').textContent = `${info.cpu.cores} Núcleos / ${info.cpu.threads} Hilos`;
-        }
-
-        // RAM
-        if (info.ram) {
-          document.getElementById('hw-ram-total').textContent = info.ram.total || '-';
-          document.getElementById('hw-ram-free').textContent = info.ram.free || '-';
-        }
-
-        // Disk
-        if (info.disk) {
-          document.getElementById('hw-disk-model').textContent = info.disk.model || '-';
-          document.getElementById('hw-disk-free').textContent = info.disk.free || '-';
-        }
-
-        // OS
-        if (info.os) {
-          document.getElementById('hw-os-caption').textContent = info.os.caption || '-';
-          document.getElementById('hw-os-build').textContent = info.os.build || '-';
-        }
-
-        appendLog('Auditoría de hardware actualizada correctamente.', 'SUCCESS');
-        setExecutionStatus(false, 'Listo — Auditoría de hardware completada.');
-      } else {
-        appendLog('No se pudieron obtener todos los datos de hardware.', 'WARN');
-        setExecutionStatus(false, 'Listo');
-      }
-    } catch (err) {
-      appendLog(`Error al consultar hardware: ${err.message}`, 'ERROR');
-      setExecutionStatus(false, 'Error en escaneo de hardware');
-    }
-  }
-
-  if (btnRefreshHardware) {
-    btnRefreshHardware.addEventListener('click', fetchHardwareInfo);
-  }
-
-  // 7. Updater & Cleaner Actions
-  if (btnCheckUpgrades) {
-    btnCheckUpgrades.addEventListener('click', () => {
-      invokeAction('check-upgrades', 'Comprobación de Actualizaciones Winget');
-    });
-  }
-
-  if (btnUpgradeAll) {
-    btnUpgradeAll.addEventListener('click', () => {
-      invokeAction('upgrade-apps', 'Actualización Masiva de Software');
-    });
-  }
-
-  if (btnRunCleaner) {
-    btnRunCleaner.addEventListener('click', () => {
-      if (confirm('¿Deseas respaldar y limpiar el Escritorio, Descargas y Documentos hacia Respaldo_Usuario?')) {
-        invokeAction('clean-profile', 'Limpieza y Respaldo de Perfil');
-      }
-    });
-  }
-
-  // 8. Terminal Controls
-  btnClearTerminal.addEventListener('click', () => {
-    terminalOutput.innerHTML = '';
-    appendLog('Consola limpiada por el usuario.', 'INFO');
-  });
-
-  btnCopyTerminal.addEventListener('click', () => {
-    const text = terminalOutput.innerText;
-    navigator.clipboard.writeText(text).then(() => {
-      appendLog('Logs copiados al portapapeles del sistema.', 'SUCCESS');
-    }).catch(() => {
-      appendLog('No se pudo acceder al portapapeles.', 'ERROR');
+  // Tiles Rápidos
+  actionTiles.forEach(tile => {
+    if (tile.id === 'btn-open-cleaner-modal') return;
+    tile.addEventListener('click', () => {
+      runAction(tile.dataset.action, tile.dataset.title, tile);
     });
   });
 
-  // 9. Initial Handshake & System Status
-  async function checkInitialStatus() {
+  // Feedback Sí
+  btnFeedbackYes.addEventListener('click', () => {
+    resultActions.classList.add('hidden');
+    resultThanks.classList.remove('hidden');
+    supportCard.classList.add('hidden');
+  });
+
+  // Feedback No
+  btnFeedbackNo.addEventListener('click', () => {
+    resultActions.classList.add('hidden');
+    openSupport();
+  });
+
+  // Cerrar Banner
+  btnCloseBanner.addEventListener('click', () => {
+    resultBanner.classList.add('hidden');
+  });
+
+  // Copiar Reporte
+  btnCopySupport.addEventListener('click', async () => {
+    const text = supportReportText.textContent;
     try {
-      const res = await fetch('/api/status');
-      if (res.ok) {
-        const status = await res.json();
-        if (status.isAdmin) {
-          adminStatusText.textContent = 'Administrador Activo';
-        } else {
-          adminStatusText.textContent = 'Permisos Limitados';
-          document.getElementById('admin-status-pill').className = 'status-pill';
-        }
-        if (status.hostName) {
-          hostText.textContent = status.hostName;
-        }
-        appendLog(`Conectado al servidor local en ${status.hostName || 'Windows'} (UAC: ${status.isAdmin ? 'Admin' : 'Normal'})`, 'SUCCESS');
-      }
+      await navigator.clipboard.writeText(text);
+      btnCopySupport.classList.add('copied');
+      copySupportText.textContent = '✓ ¡Copiado!';
+      setTimeout(() => {
+        btnCopySupport.classList.remove('copied');
+        copySupportText.textContent = '📋 Copiar Reporte';
+      }, 3000);
     } catch (e) {
-      appendLog('Servidor local respondiendo en modo estándar.', 'INFO');
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      copySupportText.textContent = '✓ ¡Copiado!';
     }
+  });
+
+  // Teams
+  btnTeamsSupport.addEventListener('click', () => {
+    btnCopySupport.click();
+    alert('El reporte fue copiado. Pégalo en tu chat con Soporte en Microsoft Teams.');
+  });
+
+  // Modal Limpieza
+  if (btnOpenCleaner) {
+    btnOpenCleaner.addEventListener('click', () => {
+      cleanerModal.classList.remove('hidden');
+    });
   }
 
-  checkInitialStatus();
+  btnModalBack.addEventListener('click', () => {
+    cleanerModal.classList.add('hidden');
+  });
+
+  btnModalOk.addEventListener('click', () => {
+    cleanerModal.classList.add('hidden');
+    runAction(btnModalOk.dataset.action, btnModalOk.dataset.title);
+  });
+
+  // Opciones Avanzadas
+  btnToggleAdvanced.addEventListener('click', () => {
+    advancedPanel.classList.toggle('hidden');
+    if (!advancedPanel.classList.contains('hidden')) {
+      loadTelemetry();
+      advancedPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  btnClearTerminal.addEventListener('click', () => {
+    terminalOutput.innerHTML = '<div class="log-row info">[SISTEMA] Consola limpiada.</div>';
+  });
+
+  // Inicializar chequeo inicial
+  checkHealth();
 });

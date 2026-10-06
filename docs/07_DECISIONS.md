@@ -35,3 +35,27 @@
 - **Contexto:** El comando `move` estándar de cmd falla al mover directorios bloqueados, árboles profundos o archivos de sistema como `desktop.ini`.
 - **Decisión:** Utilizar `robocopy /E /MOVE /XF "desktop.ini" /XD "Respaldo_Usuario" /R:1 /W:1`.
 - **Consecuencias:** Migración robusta, tolerante a reintentos rápidos y sin errores por recursión de carpetas.
+
+---
+
+## ADR 005: Paradigma de Interfaz Orientada a Síntomas y Ventana de Aplicación de Escritorio
+- **Fecha:** 2026-10-06
+- **Estado:** Aceptado
+- **Contexto:** La interfaz técnica original exponía nombres de servicios de Windows (`Spooler`, `wuauserv`, `AudioEndpointBuilder`) y tablas crudas pensadas para administradores, lo que generaba fricción y confusión en usuarios de oficina sin conocimientos informáticos.
+- **Decisión:** 
+  1. Rediseñar la UI hacia un catálogo de síntomas cotidianos ("No me escuchan", "Sin internet o Teams", "Impresora atascada") y un botón central de "Auto-Reparación en 1 Clic".
+  2. Lanzar la interfaz en modo aplicación de escritorio nativa (`--app` con Edge/Chrome o WebView2) para eliminar pestañas y barras de navegación.
+  3. Incorporar un flujo de feedback con botón automático para generar y copiar el diagnóstico formateado para soporte IT ante cualquier fallo.
+- **Consecuencias:** Mayor adopción, resolución autónoma en <2 clics y recepción de reportes estandarizados por parte de Soporte IT sin que el usuario tenga que redactar logs técnicos.
+
+---
+
+## ADR 006: Migración de Servidor Web Local a Aplicación Nativa de Escritorio WPF / XAML
+- **Fecha:** 2026-10-06
+- **Estado:** Aceptado
+- **Contexto:** La implementación previa basada en un servidor local HTTP (`Node.js` / `server.ps1`) y navegador web presentaba puntos de fallo externos: puertos de red bloqueados u ocupados (5050/5051), cierre accidental de la ventana de consola del servidor, discrepancias de resolución IPv4/IPv6 (`localhost` vs `127.0.0.1`), y errores de `Failed to fetch`.
+- **Decisión:** Implementar la suite completa de Auto-Atención y Diagnóstico como una **aplicación nativa de escritorio pura en Windows (WPF/XAML en PowerShell/STA)** (`AsistenciaOrange.ps1` y `AsistenciaOrange.bat`), eliminando intermediarios HTTP, puertos y dependencias de navegador.
+- **Consecuencias:**
+  - *Positivas:* 100% de fiabilidad, ejecución en memoria directa mediante hilos asíncronos (`Task.Run`), cero errores de red o puertos, inicio directo con doble clic, elevación UAC limpia y visualización de progreso en tiempo real fluida.
+  - *Negativas:* No se puede acceder desde otros dispositivos en la red (diseñado exclusivamente para uso local en la máquina cliente).
+

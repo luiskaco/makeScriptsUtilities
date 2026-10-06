@@ -1,13 +1,40 @@
 # 06. Backlog y Tareas Activas (TASKS)
 
 ## 📌 Estado General del Proyecto
-- **Versión Actual:** v1.0.0
-- **Estado:** Producción / Estable
+- **Versión Actual:** v1.1.0-dev
+- **Estado:** En desarrollo (Feature: Portal de Auto-Atención para Usuarios)
+
+---
+
+## ⏳ En Progreso (In Progress)
+
+*(No hay tareas activas en desarrollo)*
 
 ---
 
 ## 🚀 Tareas Completadas
 
+- [x] **Portal de Auto-Atención Nativo de Escritorio (WPF / XAML)**
+  - Construcción de aplicación 100% nativa en Windows (`AsistenciaOrange.ps1` y `AsistenciaOrange.bat`).
+  - Eliminación de dependencias de servidores HTTP, puertos locales de red y navegadores web.
+  - Soporte de tarjeta 1-Click Auto-Fix, 6 tarjetas de síntomas, telemetría WMI, barra de progreso nativa en tiempo real y consola integrada.
+  - Flujo de feedback posterior y generación automática de reporte para Soporte TI (Copiar, Correo, Teams).
+- [x] **Fix: Estabilidad de Conexión y Optimización de Telemetría**
+  - Corrección de saturación por peticiones repetitivas de telemetría WMI (`loadTelemetry`).
+  - Binding dual IPv4 / IPv6 para compatibilidad total con navegadores en `http://localhost:5050` y `http://127.0.0.1:5050`.
+  - Simplificación y robustecimiento de elevación UAC en `Abrir-Utilidad-Web.bat`.
+- [x] **Visualización de Progreso en Tiempo Real y Tracking de Pasos en Consola y Web**
+  - Consola de terminal (CMD / PowerShell / Node.js) con tracking detallado de pasos `[Paso X/Y] (Z%)`, timestamps y colores ANSI.
+  - Endpoint de Server-Sent Events (SSE) `/api/action-stream/:action` en servidores Node.js (`server.js`) y PowerShell (`server.ps1`).
+  - Barra de progreso interactiva en la interfaz web con porcentaje, indicador de paso actual y barra de llenado fluida.
+  - Consola web integrada (`terminal-output`) con streaming de logs en vivo en tiempo real.
+- [x] **Portal de Auto-Atención y Diagnóstico para Usuarios Finales (UI/UX)**
+  - Rediseño completo de la interfaz hacia un enfoque de síntomas cotidianos (Audio, Red/Teams, Impresión, Pantalla/Congelamiento, Actualizaciones).
+  - Implementación del botón Hero *"Optimizar y Reparar mi Equipo"* (1-Click Auto-Fix).
+  - Apertura en modo ventana de escritorio nativa (`--app` sin barras de navegación).
+  - Flujo de feedback posterior a la acción: *"¿Se solucionó tu problema?"* con generación automática de *"Copiar reporte para Soporte IT"*.
+  - Modales de confirmación con salvaguardas para acciones críticas (Restablecimiento de perfil).
+  - Vista colapsable de telemetría y consola técnica para personal de soporte.
 - [x] **Creación de Interfaz Gráfica WPF/XAML para `utilities/`**
   - Implementación de la ventana moderna con tema oscuro y acentos Orange Latam.
   - Creación del componente de visualización de logs en tiempo real con scroll automático y botones de copiar/limpiar.

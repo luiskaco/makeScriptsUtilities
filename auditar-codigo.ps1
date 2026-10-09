@@ -94,13 +94,17 @@ if (Test-Path $portalPs1) {
         # Elementos críticos
         $critElements = @(
             "lblHostName", "lblUserName", "lblIpAddress", "lblRamTotal",
+            "headerBorder", "btnHeaderMin", "btnHeaderMax", "btnHeaderClose",
             "btnHeroRepairAll", "btnTileAudio", "btnTileWifi", "btnTileSpooler",
             "btnTileExplorer", "btnTileUpgrade", "btnTileCleanProfile",
             "panelProgress", "txtStepBadge", "txtActionTitle", "txtStepDescription",
             "txtProgressPercent", "progressBarAction", "panelResult", "txtResultIcon",
             "txtResultTitle", "txtResultDesc", "panelResultActions", "panelResultThanks",
-            "btnFeedbackYes", "btnFeedbackNo", "btnCloseResult", "panelSupport",
-            "txtSupportReport", "btnCopyReport", "btnMailSupport", "btnTeamsSupport",
+            "btnFeedbackYes", "btnFeedbackNo", "btnCloseResult",
+            "panelPrinterConfig", "btnClosePrinterConfig", "txtPrinterName", "txtPrinterIp",
+            "btnTestPrinterSocket", "cmbPrinterDriver", "chkPrinterDefault", "chkPrinterTestPage",
+            "txtPrinterTestResult", "btnRestartSpoolerQuick", "btnCancelPrinter", "btnInstallPrinter",
+            "panelSupport", "txtSupportReport", "btnCopyReport", "btnMailSupport", "btnTeamsSupport",
             "btnToggleConsole", "panelConsole", "txtLogs", "btnCopyLog", "btnClearLog",
             "txtStatusDot", "txtStatusMessage"
         )

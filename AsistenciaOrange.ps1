@@ -507,7 +507,8 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="txtPrinterTestResult" Text="Listo para configurar. Ingresa los datos y haz clic en Instalar." FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button x:Name="btnRestartSpoolerQuick" Content="⚡ Desatascar Cola" Style="{StaticResource PillButtonStyle}" Margin="0,0,10,0" Padding="14,8" FontSize="12" Cursor="Hand" ToolTip="Reinicia el servicio Spooler"/>
+                                <Button x:Name="btnCancelPrinter" Content="Cancelar" Style="{StaticResource PillButtonStyle}" Margin="0,0,8,0" Padding="12,8" FontSize="12" Cursor="Hand"/>
+                                <Button x:Name="btnRestartSpoolerQuick" Content="⚡ Desatascar Cola" Style="{StaticResource PillButtonStyle}" Margin="0,0,8,0" Padding="14,8" FontSize="12" Cursor="Hand" ToolTip="Reinicia el servicio Spooler"/>
                                 <Button x:Name="btnInstallPrinter" Content="🖨️ Instalar y Configurar Impresora" Style="{StaticResource HeroButtonStyle}" Padding="18,8" FontSize="12" Cursor="Hand"/>
                             </StackPanel>
                         </Grid>
@@ -742,6 +743,7 @@ $panelResultActions = $window.FindName("panelResultActions")
 $panelResultThanks  = $window.FindName("panelResultThanks")
 $btnFeedbackYes     = $window.FindName("btnFeedbackYes")
 $btnFeedbackNo      = $window.FindName("btnFeedbackNo")
+$btnCloseResult     = $window.FindName("btnCloseResult")
 $panelPrinterConfig     = $window.FindName("panelPrinterConfig")
 $btnClosePrinterConfig  = $window.FindName("btnClosePrinterConfig")
 $txtPrinterName         = $window.FindName("txtPrinterName")

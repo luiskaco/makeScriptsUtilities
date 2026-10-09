@@ -14,6 +14,10 @@
 
 ## 🚀 Tareas Completadas
 
+- [x] **Fix: Resolución de Excepción Null en Mapeo XAML (`AsistenciaOrange.ps1`)**
+  - Corrección de mapeo de `$btnCloseResult` que faltaba declarar en `FindName`.
+  - Inclusión del control `btnCancelPrinter` en el XAML y mapeo correspondiente.
+  - Auditoría de 54 controles XAML validada al 100% en `auditar-codigo.ps1`.
 - [x] **Configurador e Instalador de Impresoras de Red (TCP/IP Port 9100)**
   - Panel interactivo con formulario: Nombre personalizado de impresora, IP de red, Selector dinámico de controladores de Windows.
   - Test de conectividad a socket TCP IP:9100 antes de instalación.

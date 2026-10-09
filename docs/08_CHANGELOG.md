@@ -4,6 +4,21 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 
 ---
 
+## [1.2.1] - 2026-10-09
+
+### Añadido (Added)
+- **Configurador de Impresoras de Red (TCP/IP Puerto 9100)**:
+  - Formulario interactivo en WPF para configuración de impresoras de red por IP y puerto estándar 9100 RAW.
+  - Asignación de nombre personalizado, prueba de socket en vivo (`Test-PrinterPort9100`) y selección automática de controladores del sistema.
+  - Creación de puerto con `Add-PrinterPort`, registro con `Add-Printer`, envío opcional de página de prueba y establecimiento como predeterminada.
+
+### Corregido (Fixed)
+- **Mapeo de Controles XAML (`AsistenciaOrange.ps1`)**:
+  - Corrección de excepción por valor null al registrar eventos de botones (`$btnCloseResult`, `$btnCancelPrinter`).
+  - Mapeo y validación de 54 controles XAML al 100% en la suite `auditar-codigo.ps1`.
+
+---
+
 ## [1.2.0] - 2026-10-06
 
 ### Añadido (Added)

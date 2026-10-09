@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Utilidad Orange Latam - Interfaz Gráfica (WPF / PowerShell)
     Herramienta para reinicio rápido de servicios y subsistemas de Windows.
@@ -7,11 +7,20 @@
 # Resolver ruta absoluta del script de forma robusta
 $targetScript = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $PSScriptRoot "UtilidadOrangeLatam.GUI.ps1" }
 
-# Auto-elevación a permisos de Administrador
+# Auto-elevación a permisos de Administrador (solo cuando corre directamente como script .ps1 fuera del .exe)
+$isExe = [System.AppDomain]::CurrentDomain.FriendlyName -match '\.exe$' -and [System.AppDomain]::CurrentDomain.FriendlyName -notmatch 'powershell'
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin -and (Test-Path $targetScript)) {
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -STA -File `"$targetScript`"" -Verb RunAs
-    exit
+
+if (-not $isExe -and -not $isAdmin -and (Test-Path $targetScript)) {
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "powershell.exe"
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -STA -File `"$targetScript`""
+        $psi.Verb = "runas"
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        exit
+    } catch {}
 }
 
 # Cargar librerías necesarias de WPF

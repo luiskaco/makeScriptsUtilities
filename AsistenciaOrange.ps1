@@ -11,14 +11,17 @@ param()
 # Resolver ruta absoluta del script
 $targetScript = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $PSScriptRoot "AsistenciaOrange.ps1" }
 
-# Auto-elevación segura a Administrador
+# Auto-elevación segura a Administrador (solo cuando corre directamente como script .ps1 fuera del .exe)
+$isExe = [System.AppDomain]::CurrentDomain.FriendlyName -match '\.exe$' -and [System.AppDomain]::CurrentDomain.FriendlyName -notmatch 'powershell'
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin -and (Test-Path $targetScript)) {
+
+if (-not $isExe -and -not $isAdmin -and (Test-Path $targetScript)) {
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "powershell.exe"
-        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -STA -File `"$targetScript`""
+        $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -STA -File `"$targetScript`""
         $psi.Verb = "runas"
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
         [System.Diagnostics.Process]::Start($psi) | Out-Null
         exit
     } catch {

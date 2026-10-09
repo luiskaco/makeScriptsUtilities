@@ -55,5 +55,4 @@ echo   - Todo se unifico en la carpeta: Escritorio\Respaldo_Usuario
 echo   - El fondo de pantalla ha vuelto al original de Windows.
 echo ====================================================================
 echo.
-pause
-exit
+exit /b

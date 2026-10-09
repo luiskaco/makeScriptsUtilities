@@ -665,6 +665,16 @@ $script:isBusy = $false
 $script:lastActionName = ""
 $script:hardwareInfo = @{}
 
+# Función para Forzar Refresco del UI en Tiempo Real (DoEvents / Message Pump)
+function Update-Gui {
+    try {
+        [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+            [Action]{},
+            [System.Windows.Threading.DispatcherPriority]::Background
+        )
+    } catch {}
+}
+
 # Función de Registro en Consola WPF
 function Write-GuiLog {
     param(
@@ -681,10 +691,9 @@ function Write-GuiLog {
         default { "[i INFO]" }
     }
 
-    $window.Dispatcher.Invoke([Action]{
-        $txtLogs.AppendText("[$time] $prefix $Message`r`n")
-        $txtLogs.ScrollToEnd()
-    })
+    $txtLogs.AppendText("[$time] $prefix $Message`r`n")
+    $txtLogs.ScrollToEnd()
+    Update-Gui
 }
 
 # Función para Actualizar el Progreso en Tiempo Real
@@ -696,13 +705,12 @@ function Set-GuiProgress {
         [int]$Percent
     )
 
-    $window.Dispatcher.Invoke([Action]{
-        $txtStepBadge.Text = "Paso $Step de $Total"
-        $txtStepDescription.Text = $Label
-        $txtProgressPercent.Text = "$Percent%"
-        $progressBarAction.Value = $Percent
-        $txtStatusMessage.Text = "Paso $Step de $($Total): $Label"
-    })
+    $txtStepBadge.Text = "Paso $Step de $Total"
+    $txtStepDescription.Text = $Label
+    $txtProgressPercent.Text = "$Percent%"
+    $progressBarAction.Value = $Percent
+    $txtStatusMessage.Text = "Paso $Step de $($Total): $Label"
+    Update-Gui
     Write-GuiLog ("[Paso {0}/{1}] ({2}%) {3}" -f $Step, $Total, $Percent, $Label) "STEP"
 }
 
@@ -710,23 +718,22 @@ function Set-GuiProgress {
 function Set-UiEnabled {
     param([bool]$Enabled)
 
-    $window.Dispatcher.Invoke([Action]{
-        $btnHeroRepairAll.IsEnabled   = $Enabled
-        $btnTileAudio.IsEnabled       = $Enabled
-        $btnTileWifi.IsEnabled        = $Enabled
-        $btnTileSpooler.IsEnabled     = $Enabled
-        $btnTileExplorer.IsEnabled    = $Enabled
-        $btnTileUpgrade.IsEnabled     = $Enabled
-        $btnTileCleanProfile.IsEnabled= $Enabled
+    $btnHeroRepairAll.IsEnabled    = $Enabled
+    $btnTileAudio.IsEnabled        = $Enabled
+    $btnTileWifi.IsEnabled         = $Enabled
+    $btnTileSpooler.IsEnabled      = $Enabled
+    $btnTileExplorer.IsEnabled     = $Enabled
+    $btnTileUpgrade.IsEnabled      = $Enabled
+    $btnTileCleanProfile.IsEnabled = $Enabled
 
-        if (-not $Enabled) {
-            $txtStatusDot.Foreground = [System.Windows.Media.Brushes]::Orange
-            $txtStatusDot.Text = "◌"
-        } else {
-            $txtStatusDot.Foreground = [System.Windows.Media.Brushes]::MediumSeaGreen
-            $txtStatusDot.Text = "●"
-        }
-    })
+    if (-not $Enabled) {
+        $txtStatusDot.Foreground = [System.Windows.Media.Brushes]::Orange
+        $txtStatusDot.Text = "◌"
+    } else {
+        $txtStatusDot.Foreground = [System.Windows.Media.Brushes]::MediumSeaGreen
+        $txtStatusDot.Text = "●"
+    }
+    Update-Gui
 }
 
 # Función para Mostrar Banner de Resultado
@@ -737,40 +744,38 @@ function Show-ResultBanner {
         [string]$ErrorMessage = $null
     )
 
-    $window.Dispatcher.Invoke([Action]{
-        $panelProgress.Visibility = [System.Windows.Visibility]::Collapsed
-        $panelResult.Visibility = [System.Windows.Visibility]::Visible
-        $panelResultActions.Visibility = [System.Windows.Visibility]::Visible
-        $panelResultThanks.Visibility = [System.Windows.Visibility]::Collapsed
+    $panelProgress.Visibility = [System.Windows.Visibility]::Collapsed
+    $panelResult.Visibility = [System.Windows.Visibility]::Visible
+    $panelResultActions.Visibility = [System.Windows.Visibility]::Visible
+    $panelResultThanks.Visibility = [System.Windows.Visibility]::Collapsed
 
-        if ($Success) {
-            $txtResultIcon.Text = "🎉"
-            $txtResultTitle.Text = "¡Listo! Tarea completada con éxito."
-            $txtResultDesc.Text = "¿Tu equipo ya funciona correctamente tras $Title?"
-            $txtStatusMessage.Text = "Completado: $Title exitoso."
-        } else {
-            $txtResultIcon.Text = "⚠️"
-            $txtResultTitle.Text = "Requirió atención adicional."
-            $txtResultDesc.Text = if ($ErrorMessage) { "Detalle: $ErrorMessage" } else { "Es posible que se requiera asistencia de TI." }
-            $txtStatusMessage.Text = "Error en $Title."
-            Open-SupportCard
-        }
-    })
+    if ($Success) {
+        $txtResultIcon.Text = "🎉"
+        $txtResultTitle.Text = "¡Listo! Tarea completada con éxito."
+        $txtResultDesc.Text = "¿Tu equipo ya funciona correctamente tras $Title?"
+        $txtStatusMessage.Text = "Completado: $Title exitoso."
+    } else {
+        $txtResultIcon.Text = "⚠️"
+        $txtResultTitle.Text = "Requirió atención adicional."
+        $txtResultDesc.Text = if ($ErrorMessage) { "Detalle: $ErrorMessage" } else { "Es posible que se requiera asistencia de TI." }
+        $txtStatusMessage.Text = "Error en $Title."
+        Open-SupportCard
+    }
+    Update-Gui
 }
 
 # Función para Abrir Tarjeta de Soporte TI
 function Open-SupportCard {
-    $window.Dispatcher.Invoke([Action]{
-        $panelSupport.Visibility = [System.Windows.Visibility]::Visible
+    $panelSupport.Visibility = [System.Windows.Visibility]::Visible
 
-        $pc = $lblHostName.Text
-        $user = $lblUserName.Text
-        $ip = $lblIpAddress.Text
-        $ram = $lblRamTotal.Text
-        $action = $script:lastActionName
-        $timeStr = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+    $pc = $lblHostName.Text
+    $user = $lblUserName.Text
+    $ip = $lblIpAddress.Text
+    $ram = $lblRamTotal.Text
+    $action = $script:lastActionName
+    $timeStr = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 
-        $reportText = @"
+    $reportText = @"
 =========================================
   REPORTE ASISTENCIA TI - ORANGE LATAM
 =========================================
@@ -783,11 +788,11 @@ RAM:       $ram
 Problema:  $action
 =========================================
 "@
-        $txtSupportReport.Text = $reportText
-    })
+    $txtSupportReport.Text = $reportText
+    Update-Gui
 }
 
-# Ejecutor Asíncrono en Hilos (Task.Run)
+# Ejecutor de Acciones en Tiempo Real
 function Run-AsyncAction {
     param(
         [string]$ActionName,
@@ -798,85 +803,76 @@ function Run-AsyncAction {
     $script:isBusy = $true
     $script:lastActionName = $ActionName
 
-    $window.Dispatcher.Invoke([Action]{
-        $panelResult.Visibility = [System.Windows.Visibility]::Collapsed
-        $panelSupport.Visibility = [System.Windows.Visibility]::Collapsed
-        $panelProgress.Visibility = [System.Windows.Visibility]::Visible
-        $txtActionTitle.Text = $ActionName
-        $txtStepBadge.Text = "Iniciando..."
-        $txtStepDescription.Text = "Preparando ejecución de Windows..."
-        $txtProgressPercent.Text = "5%"
-        $progressBarAction.Value = 5
-    })
+    $panelResult.Visibility = [System.Windows.Visibility]::Collapsed
+    $panelSupport.Visibility = [System.Windows.Visibility]::Collapsed
+    $panelProgress.Visibility = [System.Windows.Visibility]::Visible
+    $txtActionTitle.Text = $ActionName
+    $txtStepBadge.Text = "Iniciando..."
+    $txtStepDescription.Text = "Preparando ejecución de Windows..."
+    $txtProgressPercent.Text = "5%"
+    $progressBarAction.Value = 5
+    Update-Gui
 
     Set-UiEnabled $false
     Write-GuiLog "============================================================" "INFO"
     Write-GuiLog "INICIANDO: $ActionName" "INFO"
 
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $actionSuccess = $true
+    $errorDetail = $null
 
-    [System.Threading.Tasks.Task]::Run([Action]{
-        $actionSuccess = $true
-        $errorDetail = $null
+    try {
+        & $TaskBlock
+        Write-GuiLog "Acción '$ActionName' finalizada con éxito." "OK"
+    }
+    catch {
+        $actionSuccess = $false
+        $errorDetail = $_.Exception.Message
+        Write-GuiLog "Error durante '$ActionName': $errorDetail" "ERROR"
+    }
+    finally {
+        $stopwatch.Stop()
+        $elapsedSec = "{0:N1}s" -f ($stopwatch.ElapsedMilliseconds / 1000)
+        Write-GuiLog "Tiempo total de ejecución: $elapsedSec" "INFO"
+        Write-GuiLog "============================================================" "INFO"
 
-        try {
-            & $TaskBlock
-            Write-GuiLog "Acción '$ActionName' finalizada con éxito." "OK"
-        }
-        catch {
-            $actionSuccess = $false
-            $errorDetail = $_.Exception.Message
-            Write-GuiLog "Error durante '$ActionName': $errorDetail" "ERROR"
-        }
-        finally {
-            $stopwatch.Stop()
-            $elapsedSec = "{0:N1}s" -f ($stopwatch.ElapsedMilliseconds / 1000)
-            Write-GuiLog "Tiempo total de ejecución: $elapsedSec" "INFO"
-            Write-GuiLog "============================================================" "INFO"
+        $progressBarAction.Value = 100
+        $txtProgressPercent.Text = "100%"
+        $txtStepDescription.Text = "¡Completado!"
+        Update-Gui
 
-            $window.Dispatcher.Invoke([Action]{
-                $progressBarAction.Value = 100
-                $txtProgressPercent.Text = "100%"
-                $txtStepDescription.Text = "¡Completado!"
-            })
-
-            Start-Sleep -Milliseconds 400
-            Show-ResultBanner -Success $actionSuccess -Title $ActionName -ErrorMessage $errorDetail
-            Set-UiEnabled $true
-            $script:isBusy = $false
-        }
-    })
+        Start-Sleep -Milliseconds 300
+        Show-ResultBanner -Success $actionSuccess -Title $ActionName -ErrorMessage $errorDetail
+        Set-UiEnabled $true
+        $script:isBusy = $false
+        Update-Gui
+    }
 }
 
 # Carga de Telemetría Inicial
 function Load-HardwareTelemetry {
-    [System.Threading.Tasks.Task]::Run([Action]{
-        try {
-            $hostName = $env:COMPUTERNAME
-            $userName = $env:USERNAME
+    try {
+        $hostName = $env:COMPUTERNAME
+        $userName = $env:USERNAME
 
-            $window.Dispatcher.Invoke([Action]{
-                $lblHostName.Text = $hostName
-                $lblUserName.Text = $userName
-            })
+        $lblHostName.Text = $hostName
+        $lblUserName.Text = $userName
 
-            $os = Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue
-            $ramTotal = (Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Measure-Object -Property Capacity -Sum).Sum
-            $ip = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'Wi-Fi*','Ethernet*' -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress
-            if (-not $ip) { $ip = "Desconectado" }
+        $os = Get-CimInstance Win32_OperatingSystem -ErrorAction SilentlyContinue
+        $ramTotal = (Get-CimInstance Win32_PhysicalMemory -ErrorAction SilentlyContinue | Measure-Object -Property Capacity -Sum).Sum
+        $ip = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceAlias 'Wi-Fi*','Ethernet*' -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress
+        if (-not $ip) { $ip = "Desconectado" }
 
-            $ramStr = if ($ramTotal) { "{0:N1} GB" -f ($ramTotal / 1GB) } else { "N/D" }
-            $script:hardwareInfo.osCaption = if ($os) { "$($os.Caption) (Build $($os.BuildNumber))" } else { "Windows 10/11" }
+        $ramStr = if ($ramTotal) { "{0:N1} GB" -f ($ramTotal / 1GB) } else { "N/D" }
+        $script:hardwareInfo.osCaption = if ($os) { "$($os.Caption) (Build $($os.BuildNumber))" } else { "Windows 10/11" }
 
-            $window.Dispatcher.Invoke([Action]{
-                $lblIpAddress.Text = $ip
-                $lblRamTotal.Text = $ramStr
-            })
-            Write-GuiLog "Telemetría cargada: $hostName ($ip) | RAM: $ramStr" "OK"
-        } catch {
-            Write-GuiLog "Aviso leyendo telemetría: $_" "WARN"
-        }
-    })
+        $lblIpAddress.Text = $ip
+        $lblRamTotal.Text = $ramStr
+        Update-Gui
+        Write-GuiLog "Telemetría cargada: $hostName ($ip) | RAM: $ramStr" "OK"
+    } catch {
+        Write-GuiLog "Aviso leyendo telemetría: $_" "WARN"
+    }
 }
 
 # ==========================================================================

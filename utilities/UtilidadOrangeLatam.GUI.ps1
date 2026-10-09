@@ -345,6 +345,16 @@ $txtLogs         = $window.FindName("txtLogs")
 $txtStatusIcon   = $window.FindName("txtStatusIcon")
 $txtStatusMessage= $window.FindName("txtStatusMessage")
 
+# Función para forzar refresco del UI en tiempo real
+function Update-Gui {
+    try {
+        [System.Windows.Threading.Dispatcher]::CurrentDispatcher.Invoke(
+            [Action]{},
+            [System.Windows.Threading.DispatcherPriority]::Background
+        )
+    } catch {}
+}
+
 # Función para escribir mensajes en la consola WPF
 function Write-GuiLog {
     param(
@@ -362,10 +372,9 @@ function Write-GuiLog {
 
     $formattedLine = "[$timestamp] $prefix $Message"
 
-    $window.Dispatcher.Invoke([Action]{
-        $txtLogs.AppendText("$formattedLine`r`n")
-        $txtLogs.ScrollToEnd()
-    })
+    $txtLogs.AppendText("$formattedLine`r`n")
+    $txtLogs.ScrollToEnd()
+    Update-Gui
 }
 
 # Función para actualizar la barra de estado
@@ -375,43 +384,41 @@ function Set-GuiStatus {
         [string]$State = "READY" # READY, BUSY, ERROR, DONE
     )
 
-    $window.Dispatcher.Invoke([Action]{
-        switch ($State) {
-            "BUSY" {
-                $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::Orange
-                $txtStatusIcon.Text = "◌"
-            }
-            "ERROR" {
-                $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::Crimson
-                $txtStatusIcon.Text = "●"
-            }
-            "DONE" {
-                $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::MediumSeaGreen
-                $txtStatusIcon.Text = "✓"
-            }
-            default {
-                $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::LimeGreen
-                $txtStatusIcon.Text = "●"
-            }
+    switch ($State) {
+        "BUSY" {
+            $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::Orange
+            $txtStatusIcon.Text = "◌"
         }
-        $txtStatusMessage.Text = $Message
-    })
+        "ERROR" {
+            $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::Crimson
+            $txtStatusIcon.Text = "●"
+        }
+        "DONE" {
+            $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::MediumSeaGreen
+            $txtStatusIcon.Text = "✓"
+        }
+        default {
+            $txtStatusIcon.Foreground = [System.Windows.Media.Brushes]::LimeGreen
+            $txtStatusIcon.Text = "●"
+        }
+    }
+    $txtStatusMessage.Text = $Message
+    Update-Gui
 }
 
 # Función para bloquear/desbloquear botones durante tareas
 function Set-ControlsEnabled {
     param([bool]$Enabled)
-    $window.Dispatcher.Invoke([Action]{
-        $btnExplorer.IsEnabled = $Enabled
-        $btnNetwork.IsEnabled  = $Enabled
-        $btnSpooler.IsEnabled  = $Enabled
-        $btnAudio.IsEnabled    = $Enabled
-        $btnUpdate.IsEnabled   = $Enabled
-        $btnAll.IsEnabled      = $Enabled
-    })
+    $btnExplorer.IsEnabled = $Enabled
+    $btnNetwork.IsEnabled  = $Enabled
+    $btnSpooler.IsEnabled  = $Enabled
+    $btnAudio.IsEnabled    = $Enabled
+    $btnUpdate.IsEnabled   = $Enabled
+    $btnAll.IsEnabled      = $Enabled
+    Update-Gui
 }
 
-# Ejecutor Asíncrono para evitar congelar la interfaz
+# Ejecutor de tareas en tiempo real
 function Invoke-ServiceTask {
     param(
         [string]$TaskName,
@@ -422,20 +429,19 @@ function Invoke-ServiceTask {
     Set-GuiStatus "Ejecutando: $TaskName..." "BUSY"
     Write-GuiLog "Iniciando tarea: $TaskName" "INFO"
 
-    $asyncTask = [System.Threading.Tasks.Task]::Run([Action]{
-        try {
-            & $ActionBlock
-            Write-GuiLog "Tarea '$TaskName' completada correctamente." "SUCCESS"
-            Set-GuiStatus "Listo - Última acción: $TaskName exitosa." "DONE"
-        }
-        catch {
-            Write-GuiLog "Error en '$TaskName': $_" "ERROR"
-            Set-GuiStatus "Error al ejecutar $TaskName." "ERROR"
-        }
-        finally {
-            Set-ControlsEnabled $true
-        }
-    })
+    try {
+        & $ActionBlock
+        Write-GuiLog "Tarea '$TaskName' completada correctamente." "SUCCESS"
+        Set-GuiStatus "Listo - Última acción: $TaskName exitosa." "DONE"
+    }
+    catch {
+        Write-GuiLog "Error en '$TaskName': $_" "ERROR"
+        Set-GuiStatus "Error al ejecutar $TaskName." "ERROR"
+    }
+    finally {
+        Set-ControlsEnabled $true
+        Update-Gui
+    }
 }
 
 # --- ACCIONES DE REINICIO ---

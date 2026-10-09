@@ -14,6 +14,11 @@
 
 ## 🚀 Tareas Completadas
 
+- [x] **Configurador e Instalador de Impresoras de Red (TCP/IP Port 9100)**
+  - Panel interactivo con formulario: Nombre personalizado de impresora, IP de red, Selector dinámico de controladores de Windows.
+  - Test de conectividad a socket TCP IP:9100 antes de instalación.
+  - Creación automática de `Add-PrinterPort` (puerto estándar 9100 RAW) y `Add-Printer`.
+  - Opción de página de prueba y establecimiento como predeterminada.
 - [x] **Compilación de Ejecutables Nativos Windows (`.exe`)**
   - Generación de binario standalone `AsistenciaOrange.exe` (subsystem `WinExe` sin ventana CMD de fondo, UAC integrado, modo STA para WPF).
   - Generación de binario standalone `utilities/UtilidadOrangeLatam.exe` para administradores TI.

@@ -434,6 +434,86 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                     </StackPanel>
                 </Border>
 
+                <!-- 2.5.5 PANEL DE CONFIGURACIÓN DE IMPRESORA DE RED TCP/IP -->
+                <Border x:Name="panelPrinterConfig" Visibility="Collapsed" Background="#11131F" BorderBrush="#FF7A00" BorderThickness="1.5" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Background="#382E14" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                                    <TextBlock Text="🖨️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Configuración de Impresora de Red (TCP/IP Puerto 9100)" FontWeight="Bold" FontSize="15" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Conecta e instala una impresora de red mediante su dirección IP y nombre personalizado" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <Button x:Name="btnClosePrinterConfig" Grid.Column="1" Content="✕" Style="{StaticResource PillButtonStyle}" Padding="10,4" FontSize="12" Cursor="Hand" ToolTip="Cerrar panel"/>
+                        </Grid>
+
+                        <!-- Formulario de Configuración -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Campo 1: Nombre Personalizado -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,12">
+                                <TextBlock Text="Nombre de la Impresora (Personalizado):" FontSize="12" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,6"/>
+                                <TextBox x:Name="txtPrinterName" Text="Impresora Oficina - Orange" Background="#0A0B14" Foreground="#FFFFFF" BorderBrush="#2A2E45" Padding="10,8" FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Campo 2: Dirección IP -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,12">
+                                <TextBlock Text="Dirección IP de la Impresora (Puerto 9100):" FontSize="12" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="txtPrinterIp" Text="192.168.1.100" Background="#0A0B14" Foreground="#FFD180" BorderBrush="#2A2E45" Padding="10,8" FontSize="13" FontFamily="Consolas"/>
+                                    <Button x:Name="btnTestPrinterSocket" Grid.Column="1" Content="📡 Probar IP" Style="{StaticResource PillButtonStyle}" Margin="8,0,0,0" Padding="12,6" FontSize="11" Cursor="Hand" ToolTip="Verificar conectividad al puerto 9100"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Campo 3: Controlador / Driver -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,12">
+                                <TextBlock Text="Controlador / Driver de Impresión:" FontSize="12" FontWeight="SemiBold" Foreground="#E2E8F0" Margin="0,0,0,6"/>
+                                <ComboBox x:Name="cmbPrinterDriver" Background="#0A0B14" Foreground="#0D0E17" BorderBrush="#2A2E45" Padding="10,6" FontSize="13"/>
+                            </StackPanel>
+
+                            <!-- Opciones (Checkboxes) -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,4,0,4">
+                                <CheckBox x:Name="chkPrinterDefault" Content="Establecer como impresora predeterminada" IsChecked="True" Foreground="#CBD5E1" FontSize="12" Margin="0,0,24,0"/>
+                                <CheckBox x:Name="chkPrinterTestPage" Content="Imprimir página de prueba tras instalar" IsChecked="True" Foreground="#CBD5E1" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Barra de Estado y Botones -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="txtPrinterTestResult" Text="Listo para configurar. Ingresa los datos y haz clic en Instalar." FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button x:Name="btnRestartSpoolerQuick" Content="⚡ Desatascar Cola" Style="{StaticResource PillButtonStyle}" Margin="0,0,10,0" Padding="14,8" FontSize="12" Cursor="Hand" ToolTip="Reinicia el servicio Spooler"/>
+                                <Button x:Name="btnInstallPrinter" Content="🖨️ Instalar y Configurar Impresora" Style="{StaticResource HeroButtonStyle}" Padding="18,8" FontSize="12" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- 2.6 CATÁLOGO DE ACCIONES POR SÍNTOMA -->
                 <TextBlock Text="O ELIGE QUÉ DESEAS SOLUCIONAR:" FontSize="12" FontWeight="Bold" Foreground="#64748B" Margin="2,4,0,10"/>
 
@@ -662,7 +742,18 @@ $panelResultActions = $window.FindName("panelResultActions")
 $panelResultThanks  = $window.FindName("panelResultThanks")
 $btnFeedbackYes     = $window.FindName("btnFeedbackYes")
 $btnFeedbackNo      = $window.FindName("btnFeedbackNo")
-$btnCloseResult     = $window.FindName("btnCloseResult")
+$panelPrinterConfig     = $window.FindName("panelPrinterConfig")
+$btnClosePrinterConfig  = $window.FindName("btnClosePrinterConfig")
+$txtPrinterName         = $window.FindName("txtPrinterName")
+$txtPrinterIp           = $window.FindName("txtPrinterIp")
+$btnTestPrinterSocket   = $window.FindName("btnTestPrinterSocket")
+$cmbPrinterDriver       = $window.FindName("cmbPrinterDriver")
+$chkPrinterDefault      = $window.FindName("chkPrinterDefault")
+$chkPrinterTestPage     = $window.FindName("chkPrinterTestPage")
+$txtPrinterTestResult   = $window.FindName("txtPrinterTestResult")
+$btnRestartSpoolerQuick = $window.FindName("btnRestartSpoolerQuick")
+$btnCancelPrinter       = $window.FindName("btnCancelPrinter")
+$btnInstallPrinter      = $window.FindName("btnInstallPrinter")
 
 $panelSupport       = $window.FindName("panelSupport")
 $txtSupportReport   = $window.FindName("txtSupportReport")
@@ -968,18 +1059,191 @@ $btnTileWifi.Add_Click({
     }
 })
 
-# 4. Impresora
+# Funciones Auxiliares para Impresoras
+function Load-InstalledPrinterDrivers {
+    try {
+        $cmbPrinterDriver.Items.Clear()
+        $drivers = Get-PrinterDriver -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name | Sort-Object -Unique
+        if ($drivers) {
+            foreach ($d in $drivers) {
+                [void]$cmbPrinterDriver.Items.Add($d)
+            }
+        }
+        if ($cmbPrinterDriver.Items.Count -eq 0) {
+            [void]$cmbPrinterDriver.Items.Add("Microsoft IPP Class Driver")
+            [void]$cmbPrinterDriver.Items.Add("Generic / Text Only")
+            [void]$cmbPrinterDriver.Items.Add("Microsoft PCL6 Class Driver")
+        }
+        $cmbPrinterDriver.SelectedIndex = 0
+    } catch {}
+}
+
+function Test-PrinterPort9100 {
+    param([string]$IpAddress, [int]$TimeoutMs = 1500)
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $iar = $tcp.BeginConnect($IpAddress, 9100, $null, $null)
+        $wait = $iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false)
+        if ($wait -and $tcp.Connected) {
+            $tcp.EndConnect($iar)
+            $tcp.Close()
+            return $true
+        }
+        $tcp.Close()
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+# 4. Impresora (Abre Panel de Configuración y Mantenimiento)
 $btnTileSpooler.Add_Click({
-    Run-AsyncAction "Desbloqueo de Impresora" {
+    if ($panelPrinterConfig.Visibility -eq [System.Windows.Visibility]::Visible) {
+        $panelPrinterConfig.Visibility = [System.Windows.Visibility]::Collapsed
+    } else {
+        $panelPrinterConfig.Visibility = [System.Windows.Visibility]::Visible
+        $panelProgress.Visibility = [System.Windows.Visibility]::Collapsed
+        $panelResult.Visibility = [System.Windows.Visibility]::Collapsed
+        $panelSupport.Visibility = [System.Windows.Visibility]::Collapsed
+        Load-InstalledPrinterDrivers
+        $txtPrinterTestResult.Text = "Panel listo. Ingresa la IP, Nombre personalizado y Controlador."
+        $txtPrinterTestResult.Foreground = [System.Windows.Media.Brushes]::LightSlateGray
+        Write-GuiLog "Panel de configuración de impresora de red (TCP/IP) desplegado." "INFO"
+    }
+})
+
+$btnClosePrinterConfig.Add_Click({
+    $panelPrinterConfig.Visibility = [System.Windows.Visibility]::Collapsed
+})
+
+$btnCancelPrinter.Add_Click({
+    $panelPrinterConfig.Visibility = [System.Windows.Visibility]::Collapsed
+})
+
+# Desatascar Cola de Impresión Rápido
+$btnRestartSpoolerQuick.Add_Click({
+    Run-AsyncAction "Desbloqueo de Impresora y Cola Spooler" {
         Set-GuiProgress 1 2 "Deteniendo cola de impresión (Spooler)..." 40
-        Write-GuiLog "Deteniendo servicio Spooler..." "INFO"
+        Write-GuiLog "Deteniendo servicio Spooler de Windows..." "INFO"
         Stop-Service -Name Spooler -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 500
 
         Set-GuiProgress 2 2 "Iniciando servicio de impresión..." 85
-        Write-GuiLog "Reactivando Spooler..." "INFO"
+        Write-GuiLog "Reactivando servicio Spooler..." "INFO"
         Start-Service -Name Spooler -ErrorAction SilentlyContinue
-        Write-GuiLog "Cola de impresión restablecida." "OK"
+        Write-GuiLog "Cola de impresión liberada y lista." "OK"
+    }
+})
+
+# Probar Conectividad IP (Puerto 9100)
+$btnTestPrinterSocket.Add_Click({
+    $ip = $txtPrinterIp.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($ip)) {
+        $txtPrinterTestResult.Text = "Debes ingresar una dirección IP válida."
+        $txtPrinterTestResult.Foreground = [System.Windows.Media.Brushes]::Crimson
+        return
+    }
+
+    $txtPrinterTestResult.Text = "Probando conexión con $ip en el puerto 9100..."
+    $txtPrinterTestResult.Foreground = [System.Windows.Media.Brushes]::Orange
+    Update-Gui
+    Write-GuiLog "Comprobando conexión TCP a $ip`:9100..." "INFO"
+
+    $online = Test-PrinterPort9100 -IpAddress $ip -TimeoutMs 2000
+    if ($online) {
+        $txtPrinterTestResult.Text = "✓ Impresora conectada y accesible en el puerto 9100."
+        $txtPrinterTestResult.Foreground = [System.Windows.Media.Brushes]::MediumSeaGreen
+        Write-GuiLog "✓ Impresora detectada en línea en $ip`:9100." "OK"
+    } else {
+        $txtPrinterTestResult.Text = "✕ No se detectó respuesta en $ip`:9100 (Revisa si está encendida o en la misma red)."
+        $txtPrinterTestResult.Foreground = [System.Windows.Media.Brushes]::OrangeRed
+        Write-GuiLog "! No se pudo establecer conexión con $ip en el puerto 9100." "WARN"
+    }
+})
+
+# Instalar y Configurar Impresora de Red
+$btnInstallPrinter.Add_Click({
+    $pName = $txtPrinterName.Text.Trim()
+    $pIp = $txtPrinterIp.Text.Trim()
+    $pDriver = if ($cmbPrinterDriver.SelectedItem) { $cmbPrinterDriver.SelectedItem.ToString() } else { "Generic / Text Only" }
+    $setDefault = [bool]$chkPrinterDefault.IsChecked
+    $testPage = [bool]$chkPrinterTestPage.IsChecked
+
+    if ([string]::IsNullOrWhiteSpace($pName)) {
+        [System.Windows.MessageBox]::Show("Por favor ingresa un nombre personalizado para la impresora.", "Falta Nombre de Impresora", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($pIp)) {
+        [System.Windows.MessageBox]::Show("Por favor ingresa la dirección IP de la impresora.", "Falta Dirección IP", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    $panelPrinterConfig.Visibility = [System.Windows.Visibility]::Collapsed
+
+    Run-AsyncAction "Instalación de Impresora: $pName" {
+        # Paso 1: Test de Conectividad
+        Set-GuiProgress 1 4 "Comprobando conectividad con $pIp:9100..." 25
+        Write-GuiLog "Verificando socket de red en $pIp`:9100..." "INFO"
+        $isReachable = Test-PrinterPort9100 -IpAddress $pIp -TimeoutMs 2000
+        if ($isReachable) {
+            Write-GuiLog "✓ Puerto 9100 responde correctamente." "OK"
+        } else {
+            Write-GuiLog "! La impresora no respondió en el puerto 9100. Se procederá a crear el puerto y configurar en Windows..." "WARN"
+        }
+
+        # Paso 2: Crear / Verificar Puerto TCP/IP
+        Set-GuiProgress 2 4 "Configurando puerto estándar TCP/IP (IP_$pIp)..." 50
+        $portName = "IP_$pIp"
+        Write-GuiLog "Registrando puerto de impresora $portName..." "INFO"
+        
+        $existingPort = Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue
+        if (-not $existingPort) {
+            Add-PrinterPort -Name $portName -PrinterHostAddress $pIp -PortNumber 9100 -ErrorAction Stop
+            Write-GuiLog "✓ Puerto TCP/IP $portName registrado con éxito." "OK"
+        } else {
+            Write-GuiLog "i El puerto TCP/IP $portName ya se encuentra disponible." "INFO"
+        }
+
+        # Paso 3: Agregar Dispositivo de Impresión
+        Set-GuiProgress 3 4 "Vinculando impresora '$pName' con driver '$pDriver'..." 75
+        Write-GuiLog "Instalando dispositivo de impresión '$pName' en Windows..." "INFO"
+
+        $existingPrinter = Get-Printer -Name $pName -ErrorAction SilentlyContinue
+        if ($existingPrinter) {
+            Write-GuiLog "! La impresora '$pName' ya existía en el sistema. Actualizando puerto y controlador..." "WARN"
+            Set-Printer -Name $pName -PortName $portName -DriverName $pDriver -ErrorAction SilentlyContinue
+        } else {
+            Add-Printer -Name $pName -PortName $portName -DriverName $pDriver -ErrorAction Stop
+        }
+        Write-GuiLog "✓ Impresora '$pName' registrada exitosamente." "OK"
+
+        # Paso 4: Establecer como predeterminada y enviar página de prueba
+        Set-GuiProgress 4 4 "Aplicando preferencias del usuario..." 95
+        if ($setDefault) {
+            Write-GuiLog "Configurando '$pName' como impresora predeterminada de Windows..." "INFO"
+            try {
+                (New-Object -ComObject WScript.Network).SetDefaultPrinter($pName)
+                Write-GuiLog "✓ Impresora '$pName' establecida como predeterminada." "OK"
+            } catch {
+                Write-GuiLog "Aviso al definir predeterminada: $_" "WARN"
+            }
+        }
+
+        if ($testPage) {
+            Write-GuiLog "Enviando página de prueba a '$pName'..." "INFO"
+            try {
+                $wmiPrinters = Get-CimInstance -ClassName Win32_Printer -Filter "Name = '$pName'" -ErrorAction SilentlyContinue
+                if ($wmiPrinters) {
+                    Invoke-CimMethod -InputObject $wmiPrinters -MethodName PrintTestPage | Out-Null
+                    Write-GuiLog "✓ Página de prueba enviada exitosamente a la cola de impresión." "OK"
+                }
+            } catch {
+                Write-GuiLog "Aviso enviando página de prueba: $_" "WARN"
+            }
+        }
+
+        Write-GuiLog "Configuración de impresora de red completada con éxito." "OK"
     }
 })
 

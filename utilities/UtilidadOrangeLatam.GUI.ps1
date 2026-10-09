@@ -577,8 +577,19 @@ $btnCopyLog.Add_Click({
 $window.Add_Loaded({
     Write-GuiLog "Utilidad Orange Latam iniciada con éxito." "SUCCESS"
     Write-GuiLog "Permisos de Administrador verificados." "INFO"
-    Write-GuiLog "Seleccione una acción en el panel izquierdo para comenzar." "INFO"
+})
+
+# Salida limpia al cerrar
+$window.Add_KeyDown({
+    if ($_.Key -eq [System.Windows.Input.Key]::Escape) {
+        $window.Close()
+    }
+})
+
+$window.Add_Closed({
+    [System.Environment]::Exit(0)
 })
 
 # Mostrar ventana WPF
 $window.ShowDialog() | Out-Null
+[System.Environment]::Exit(0)

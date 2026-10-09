@@ -246,13 +246,16 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Estado de Administrador -->
-                <Border Grid.Column="1" Background="#11291E" BorderBrush="#1D533A" BorderThickness="1" CornerRadius="20" Padding="12,6" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Administrador Activo" FontSize="12" FontWeight="SemiBold" Foreground="#4ADE80" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                <!-- Acciones del Header: Estado y Botón de Salir -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#11291E" BorderBrush="#1D533A" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Administrador Activo" FontSize="12" FontWeight="SemiBold" Foreground="#4ADE80" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <Button x:Name="btnHeaderClose" Content="✕ Salir" Style="{StaticResource PillNoStyle}" Padding="14,6" FontSize="12" FontWeight="Bold" Cursor="Hand" ToolTip="Cerrar Asistencia Orange (Tecla Esc)"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -619,6 +622,7 @@ $lblHostName        = $window.FindName("lblHostName")
 $lblUserName        = $window.FindName("lblUserName")
 $lblIpAddress       = $window.FindName("lblIpAddress")
 $lblRamTotal        = $window.FindName("lblRamTotal")
+$btnHeaderClose     = $window.FindName("btnHeaderClose")
 
 $btnHeroRepairAll   = $window.FindName("btnHeroRepairAll")
 $btnTileAudio       = $window.FindName("btnTileAudio")
@@ -1105,9 +1109,25 @@ $btnCopyLog.Add_Click({
     } catch {}
 })
 
+# Eventos de Cierre y Salida Limpia
+$btnHeaderClose.Add_Click({
+    $window.Close()
+})
+
+$window.Add_KeyDown({
+    if ($_.Key -eq [System.Windows.Input.Key]::Escape) {
+        $window.Close()
+    }
+})
+
+$window.Add_Closed({
+    [System.Environment]::Exit(0)
+})
+
 # Inicialización al arrancar
 Write-GuiLog "Asistencia Orange (WPF Nativo) iniciada correctamente." "OK"
 Load-HardwareTelemetry
 
 # Mostrar Ventana Principal
 $window.ShowDialog() | Out-Null
+[System.Environment]::Exit(0)

@@ -20,7 +20,7 @@ if (-not (Get-Module -ListAvailable ps2exe)) {
 }
 Import-Module ps2exe -Force
 
-# Helper para cerrar procesos previos si estuvieran abiertos
+# Helper para cerrar procesos previos y liberar el archivo destino
 function Prepare-OutputFile {
     param([string]$FilePath)
     if (Test-Path $FilePath) {
@@ -29,6 +29,12 @@ function Prepare-OutputFile {
             try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch {}
         }
         Start-Sleep -Milliseconds 300
+        try {
+            Remove-Item -LiteralPath $FilePath -Force -ErrorAction Stop
+        } catch {
+            $tempOld = "$FilePath.$([System.Guid]::NewGuid().ToString('N')).old"
+            try { [System.IO.File]::Move($FilePath, $tempOld) } catch {}
+        }
     }
 }
 

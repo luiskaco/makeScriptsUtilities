@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Orange Latam - Servidor Web Local y API de Auto-Atencion
     Expone una interfaz grafica en modo aplicacion y gestiona las operaciones
@@ -306,7 +306,7 @@ function Execute-SystemAction {
                 }
             }
 
-            "check-upgrades" -or "upgrade-apps" {
+            { $_ -in "check-upgrades", "upgrade-apps" } {
                 & $stepFn 1 3 "Buscando actualizaciones disponibles con winget..." 25
                 & $logFn "Escaneando paquetes instalados..." "INFO"
                 $raw = winget upgrade | Out-String

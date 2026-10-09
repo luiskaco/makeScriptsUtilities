@@ -1487,9 +1487,19 @@ $window.Add_Closed({
 })
 
 # Inicialización al arrancar
-Write-GuiLog "Asistencia Orange (WPF Nativo) iniciada correctamente." "OK"
-Load-HardwareTelemetry
+try {
+    Write-GuiLog "Asistencia Orange (WPF Nativo) iniciada correctamente." "OK"
+    Load-HardwareTelemetry
 
-# Mostrar Ventana Principal
-$window.ShowDialog() | Out-Null
-[System.Environment]::Exit(0)
+    # Mostrar Ventana Principal
+    $window.ShowDialog() | Out-Null
+    [System.Environment]::Exit(0)
+} catch {
+    [System.Windows.MessageBox]::Show(
+        "Error en la ejecución de Asistencia Orange:`n`n$($_.Exception.Message)`n`nDetalle técnico:`n$($_.ScriptStackTrace)",
+        "Asistencia Orange - Diagnóstico",
+        [System.Windows.MessageBoxButton]::OK,
+        [System.Windows.MessageBoxImage]::Error
+    )
+    [System.Environment]::Exit(1)
+}

@@ -46,19 +46,19 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Asistencia Orange — Auto-Reparación y Diagnóstico" 
-        Height="840" Width="1040" 
-        MinHeight="720" MinWidth="900"
+        Height="860" Width="1060" 
+        MinHeight="740" MinWidth="920"
         WindowStartupLocation="CenterScreen"
-        Background="#0D0E17" 
+        Background="#0B0C15" 
         Foreground="#F1F5F9"
         FontFamily="Segoe UI, Segoe UI Variable, Microsoft YaHei, Arial">
 
     <Window.Resources>
-        <!-- Estilo de Tarjetas de Síntomas -->
+        <!-- Estilo de Tarjetas de Síntomas con Micro-interacción y Elevación -->
         <Style x:Key="SymptomTileStyle" TargetType="Button">
-            <Setter Property="Background" Value="#151724"/>
+            <Setter Property="Background" Value="#131522"/>
             <Setter Property="Foreground" Value="#F8FAFC"/>
-            <Setter Property="BorderBrush" Value="#25283B"/>
+            <Setter Property="BorderBrush" Value="#22263B"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="16,14"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -70,20 +70,39 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                 Background="{TemplateBinding Background}" 
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="12">
+                                CornerRadius="12"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <ContentPresenter Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#1F2336"/>
+                                <Setter TargetName="border" Property="Background" Value="#1A1E31"/>
                                 <Setter TargetName="border" Property="BorderBrush" Value="#FF7A00"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#FF7A00" BlurRadius="14" Direction="270" ShadowDepth="1" Opacity="0.4"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#2A1E14"/>
+                                <Setter TargetName="border" Property="Background" Value="#261C14"/>
                                 <Setter TargetName="border" Property="BorderBrush" Value="#FFA347"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -91,9 +110,16 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             </Setter>
         </Style>
 
-        <!-- Estilo de Botón Hero Naranja -->
+        <!-- Estilo de Botón Hero Naranja con Resplandor Vibrante -->
         <Style x:Key="HeroButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#FF7A00"/>
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FF8800" Offset="0"/>
+                        <GradientStop Color="#FF6200" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderBrush" Value="#FFA347"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -108,16 +134,50 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                 Background="{TemplateBinding Background}" 
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="10">
+                                CornerRadius="10"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#FF7A00" BlurRadius="12" Direction="270" ShadowDepth="2" Opacity="0.45"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF8F26"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#FFB870"/>
+                                <Setter TargetName="border" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#FFA033" Offset="0"/>
+                                            <GradientStop Color="#FF7500" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#FFD180"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.03" ScaleY="1.03"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#FF7A00" BlurRadius="20" Direction="270" ShadowDepth="2" Opacity="0.75"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#E06500"/>
+                                <Setter TargetName="border" Property="Background" Value="#D95300"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#FF7A00" BlurRadius="6" Direction="270" ShadowDepth="1" Opacity="0.2"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Opacity" Value="0.45"/>
@@ -130,9 +190,9 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 
         <!-- Estilo de Botón Píldora Secundario -->
         <Style x:Key="PillButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#222538"/>
+            <Setter Property="Background" Value="#1E2235"/>
             <Setter Property="Foreground" Value="#E2E8F0"/>
-            <Setter Property="BorderBrush" Value="#333852"/>
+            <Setter Property="BorderBrush" Value="#2E344E"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="14,8"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -145,13 +205,38 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                 Background="{TemplateBinding Background}" 
                                 BorderBrush="{TemplateBinding BorderBrush}" 
                                 BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="20">
+                                CornerRadius="20"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#2D324D"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#94A3B8"/>
+                                <Setter TargetName="border" Property="Background" Value="#282E47"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#818CF8"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.04" ScaleY="1.04"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#6366F1" BlurRadius="10" Direction="270" ShadowDepth="1" Opacity="0.35"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#171A29"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -159,20 +244,55 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             </Setter>
         </Style>
 
-        <!-- Estilo Botón Verde Sí -->
-        <Style x:Key="PillYesStyle" TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
-            <Setter Property="Background" Value="#143828"/>
+        <!-- Estilo Botón Verde Sí con Tactilidad -->
+        <Style x:Key="PillYesStyle" TargetType="Button">
+            <Setter Property="Background" Value="#133824"/>
             <Setter Property="Foreground" Value="#4ADE80"/>
             <Setter Property="BorderBrush" Value="#22C55E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="20">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="20"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#22C55E" BlurRadius="8" Direction="270" ShadowDepth="1" Opacity="0.25"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#1C4F38"/>
+                                <Setter TargetName="border" Property="Background" Value="#1C5234"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#86EFAC"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.04" ScaleY="1.04"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#22C55E" BlurRadius="14" Direction="270" ShadowDepth="1" Opacity="0.6"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0F2B1C"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -180,20 +300,55 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             </Setter>
         </Style>
 
-        <!-- Estilo Botón Rojo No -->
-        <Style x:Key="PillNoStyle" TargetType="Button" BasedOn="{StaticResource PillButtonStyle}">
+        <!-- Estilo Botón Rojo No con Tactilidad -->
+        <Style x:Key="PillNoStyle" TargetType="Button">
             <Setter Property="Background" Value="#38181A"/>
             <Setter Property="Foreground" Value="#F87171"/>
             <Setter Property="BorderBrush" Value="#EF4444"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="20">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="20"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0"/>
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#EF4444" BlurRadius="8" Direction="270" ShadowDepth="1" Opacity="0.25"/>
+                            </Border.Effect>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#4F2225"/>
+                                <Setter TargetName="border" Property="Background" Value="#522327"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#FCA5A5"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.04" ScaleY="1.04"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="border" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#EF4444" BlurRadius="14" Direction="270" ShadowDepth="1" Opacity="0.6"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#291214"/>
+                                <Setter TargetName="border" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -201,25 +356,28 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             </Setter>
         </Style>
 
-        <!-- Estilo ProgressBar Naranja -->
+        <!-- Estilo ProgressBar Naranja Pulido -->
         <Style x:Key="OrangeProgressBarStyle" TargetType="ProgressBar">
-            <Setter Property="Height" Value="8"/>
-            <Setter Property="Background" Value="#1F2338"/>
+            <Setter Property="Height" Value="9"/>
+            <Setter Property="Background" Value="#1A1C2C"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid x:Name="TemplateRoot">
-                            <Border CornerRadius="4" Background="{TemplateBinding Background}"/>
-                            <Border x:Name="PART_Track" CornerRadius="4"/>
-                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="4">
+                            <Border CornerRadius="4.5" Background="{TemplateBinding Background}"/>
+                            <Border x:Name="PART_Track" CornerRadius="4.5"/>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="4.5">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#FF7A00" Offset="0"/>
-                                        <GradientStop Color="#FFA347" Offset="0.7"/>
+                                        <GradientStop Color="#FF6200" Offset="0"/>
+                                        <GradientStop Color="#FF8C00" Offset="0.5"/>
                                         <GradientStop Color="#FFD180" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Border.Background>
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#FF7A00" BlurRadius="8" Direction="270" ShadowDepth="0" Opacity="0.5"/>
+                                </Border.Effect>
                             </Border>
                         </Grid>
                     </ControlTemplate>
@@ -228,7 +386,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
         </Style>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="22">
         <Grid.RowDefinitions>
             <!-- Header -->
             <RowDefinition Height="Auto"/>
@@ -238,8 +396,11 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER PRINCIPAL (ARRASTRABLE Y CON CONTROLES) -->
-        <Border x:Name="headerBorder" Grid.Row="0" Background="#141624" BorderBrush="#23263B" BorderThickness="1" CornerRadius="12" Padding="18,12" Margin="0,0,0,16" Cursor="Arrow">
+        <!-- 1. HEADER PRINCIPAL CON GLASS-EFFECT Y CONTROL DE VENTANA -->
+        <Border x:Name="headerBorder" Grid.Row="0" Background="#121422" BorderBrush="#202438" BorderThickness="1" CornerRadius="14" Padding="18,12" Margin="0,0,0,16" Cursor="Arrow">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="12" Direction="270" ShadowDepth="2" Opacity="0.35"/>
+            </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -247,18 +408,27 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#FF7A00" CornerRadius="10" Width="42" Height="42" Margin="0,0,14,0">
+                    <Border CornerRadius="10" Width="42" Height="42" Margin="0,0,14,0">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FF8800" Offset="0"/>
+                                <GradientStop Color="#FF5500" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.Effect>
+                            <DropShadowEffect Color="#FF7A00" BlurRadius="10" Direction="270" ShadowDepth="1" Opacity="0.5"/>
+                        </Border.Effect>
                         <TextBlock Text="⚡" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Asistencia Orange" FontSize="19" FontWeight="Bold" Foreground="#FFFFFF"/>
-                        <TextBlock Text="Portal de auto-reparación y soporte rápido" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                        <TextBlock Text="Portal de auto-reparación, diagnóstico y soporte TI rápido" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Acciones del Header: Estado y Botones de Ventana -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#11291E" BorderBrush="#1D533A" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,12,0">
+                    <Border Background="#102B1F" BorderBrush="#1C5B3D" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,12,0" ToolTip="La aplicación está ejecutándose con privilegios administrativos">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Administrador Activo" FontSize="12" FontWeight="SemiBold" Foreground="#4ADE80" VerticalAlignment="Center"/>
@@ -275,36 +445,60 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="0,0,6,0">
 
-                <!-- 2.1 TELEMETRÍA RÁPIDA DEL EQUIPO -->
-                <Border Background="#10121D" BorderBrush="#1E2235" BorderThickness="1" CornerRadius="8" Padding="14,8" Margin="0,0,0,14">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <TextBlock Text="Equipo: " Foreground="#64748B" FontSize="12"/>
-                            <TextBlock x:Name="lblHostName" Text="Cargando..." FontWeight="SemiBold" Foreground="#CBD5E1" FontSize="12"/>
+                <!-- 2.1 TELEMETRÍA RÁPIDA DEL EQUIPO CON CHIPS ESTILIZADOS -->
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Chip 1: Host -->
+                    <Border Grid.Column="0" Background="#0F111D" BorderBrush="#1C2032" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="💻 " FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="Equipo: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblHostName" Text="Cargando..." FontWeight="SemiBold" Foreground="#E2E8F0" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <TextBlock Text="Usuario: " Foreground="#64748B" FontSize="12"/>
-                            <TextBlock x:Name="lblUserName" Text="Cargando..." FontWeight="SemiBold" Foreground="#CBD5E1" FontSize="12"/>
+                    </Border>
+
+                    <!-- Chip 2: Usuario -->
+                    <Border Grid.Column="2" Background="#0F111D" BorderBrush="#1C2032" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="👤 " FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="Usuario: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblUserName" Text="Cargando..." FontWeight="SemiBold" Foreground="#E2E8F0" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <TextBlock Text="IP: " Foreground="#64748B" FontSize="12"/>
-                            <TextBlock x:Name="lblIpAddress" Text="Detectando..." FontWeight="SemiBold" Foreground="#CBD5E1" FontSize="12"/>
+                    </Border>
+
+                    <!-- Chip 3: IP -->
+                    <Border Grid.Column="4" Background="#0F111D" BorderBrush="#1C2032" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🌐 " FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="IP: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblIpAddress" Text="Detectando..." FontWeight="SemiBold" Foreground="#38BDF8" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="3" Orientation="Horizontal">
-                            <TextBlock Text="RAM: " Foreground="#64748B" FontSize="12"/>
-                            <TextBlock x:Name="lblRamTotal" Text="Detectando..." FontWeight="SemiBold" Foreground="#CBD5E1" FontSize="12"/>
+                    </Border>
+
+                    <!-- Chip 4: RAM -->
+                    <Border Grid.Column="6" Background="#0F111D" BorderBrush="#1C2032" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚡ " FontSize="12" VerticalAlignment="Center"/>
+                            <TextBlock Text="RAM: " Foreground="#64748B" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblRamTotal" Text="Detectando..." FontWeight="SemiBold" Foreground="#A78BFA" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                         </StackPanel>
-                    </Grid>
-                </Border>
+                    </Border>
+                </Grid>
 
                 <!-- 2.2 HERO CARD 1-CLICK -->
-                <Border Background="#161828" BorderBrush="#FF7A00" BorderThickness="1" CornerRadius="14" Padding="22,18" Margin="0,0,0,14">
+                <Border Background="#151726" BorderBrush="#FF7A00" BorderThickness="1.5" CornerRadius="14" Padding="22,18" Margin="0,0,0,14">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#FF7A00" BlurRadius="12" Direction="270" ShadowDepth="1" Opacity="0.2"/>
+                    </Border.Effect>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -312,11 +506,11 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                         </Grid.ColumnDefinitions>
 
                         <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
-                            <TextBlock Text="¿Algo no funciona bien?" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF"/>
-                            <TextBlock Text="Soluciona audio, conexión a internet, cola de impresión y ventanas trabadas en un solo clic." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <TextBlock Text="¿Algo no funciona correctamente?" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            <TextBlock Text="Soluciona audio, fallas de internet/Teams, cola de impresión y ventanas congeladas en un solo clic." FontSize="13" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,0"/>
                         </StackPanel>
 
-                        <Button x:Name="btnHeroRepairAll" Grid.Column="1" Style="{StaticResource HeroButtonStyle}">
+                        <Button x:Name="btnHeroRepairAll" Grid.Column="1" Style="{StaticResource HeroButtonStyle}" ToolTip="Ejecuta diagnósticos automáticos y restablece servicios clave de Windows en secuencia">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="⚡" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Reparar Todo el Equipo" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -326,7 +520,10 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 </Border>
 
                 <!-- 2.3 BARRA DE PROGRESO Y SEGUIMIENTO EN TIEMPO REAL -->
-                <Border x:Name="panelProgress" Visibility="Collapsed" Background="#1C1824" BorderBrush="#FF7A00" BorderThickness="1" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                <Border x:Name="panelProgress" Visibility="Collapsed" Background="#181524" BorderBrush="#FF7A00" BorderThickness="1.5" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#FF7A00" BlurRadius="14" Direction="270" ShadowDepth="1" Opacity="0.3"/>
+                    </Border.Effect>
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -335,7 +532,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Background="#3A2012" BorderBrush="#FF7A00" BorderThickness="1" CornerRadius="6" Padding="6,2" Margin="0,0,10,0">
+                                <Border Background="#3A1E0E" BorderBrush="#FF7A00" BorderThickness="1" CornerRadius="6" Padding="8,3" Margin="0,0,10,0">
                                     <TextBlock x:Name="txtStepBadge" Text="Paso 1 de 4" FontSize="11" FontWeight="Bold" Foreground="#FFA347"/>
                                 </Border>
                                 <TextBlock x:Name="txtActionTitle" Text="Ejecutando acción..." FontSize="14" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
@@ -350,7 +547,10 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 </Border>
 
                 <!-- 2.4 BANNER DE RESULTADO Y FEEDBACK -->
-                <Border x:Name="panelResult" Visibility="Collapsed" Background="#141E20" BorderBrush="#22C55E" BorderThickness="1" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                <Border x:Name="panelResult" Visibility="Collapsed" Background="#121D1D" BorderBrush="#22C55E" BorderThickness="1.5" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#22C55E" BlurRadius="12" Direction="270" ShadowDepth="1" Opacity="0.3"/>
+                    </Border.Effect>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -366,19 +566,22 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                         </StackPanel>
 
                         <StackPanel x:Name="panelResultActions" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button x:Name="btnFeedbackYes" Content="✓ Sí, quedó bien" Style="{StaticResource PillYesStyle}" Margin="0,0,8,0"/>
-                            <Button x:Name="btnFeedbackNo" Content="✕ Necesito ayuda de TI" Style="{StaticResource PillNoStyle}"/>
+                            <Button x:Name="btnFeedbackYes" Content="✓ Sí, quedó bien" Style="{StaticResource PillYesStyle}" Margin="0,0,8,0" ToolTip="Confirmar solución exitosa"/>
+                            <Button x:Name="btnFeedbackNo" Content="✕ Necesito ayuda de TI" Style="{StaticResource PillNoStyle}" ToolTip="Abrir panel de asistencia con informe para Soporte TI"/>
                         </StackPanel>
 
                         <StackPanel x:Name="panelResultThanks" Grid.Column="2" Visibility="Collapsed" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="✨ ¡Excelente! Ya puedes continuar." Foreground="#4ADE80" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <Button x:Name="btnCloseResult" Content="✕" Style="{StaticResource PillButtonStyle}" Width="32" Height="32" Padding="0"/>
+                            <TextBlock Text="✨ ¡Excelente! Ya puedes continuar trabajando." Foreground="#4ADE80" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <Button x:Name="btnCloseResult" Content="✕" Style="{StaticResource PillButtonStyle}" Width="32" Height="32" Padding="0" ToolTip="Cerrar mensaje"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
                 <!-- 2.5 TARJETA DE SOPORTE TI (REPORTE AUTOMÁTICO) -->
-                <Border x:Name="panelSupport" Visibility="Collapsed" Background="#181826" BorderBrush="#3B4261" BorderThickness="1" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                <Border x:Name="panelSupport" Visibility="Collapsed" Background="#161726" BorderBrush="#3B4261" BorderThickness="1.5" CornerRadius="12" Padding="18,14" Margin="0,0,0,14">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#3B4261" BlurRadius="10" Direction="270" ShadowDepth="1" Opacity="0.4"/>
+                    </Border.Effect>
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -390,15 +593,15 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                 <TextBlock Text="🛡️" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                 <StackPanel>
                                     <TextBlock Text="Contactar a Soporte TI" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF"/>
-                                    <TextBlock Text="Hemos preparado un informe automático con el diagnóstico de tu equipo." FontSize="12" Foreground="#94A3B8"/>
+                                    <TextBlock Text="Hemos preparado un informe automático con el diagnóstico exacto de tu equipo." FontSize="12" Foreground="#94A3B8"/>
                                 </StackPanel>
                             </StackPanel>
 
-                            <Button x:Name="btnCopyReport" Grid.Column="1" Content="📋 Copiar Reporte" Style="{StaticResource PillButtonStyle}"/>
+                            <Button x:Name="btnCopyReport" Grid.Column="1" Content="📋 Copiar Reporte" Style="{StaticResource PillButtonStyle}" ToolTip="Copiar texto de diagnóstico al portapapeles"/>
                         </Grid>
 
                         <TextBox x:Name="txtSupportReport" 
-                                 Background="#0C0D14" 
+                                 Background="#0A0B12" 
                                  Foreground="#CBD5E1" 
                                  FontFamily="Consolas, monospace" 
                                  FontSize="11" 
@@ -417,17 +620,17 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Button x:Name="btnMailSupport" Grid.Column="0" Style="{StaticResource PillButtonStyle}">
+                            <Button x:Name="btnMailSupport" Grid.Column="0" Style="{StaticResource PillButtonStyle}" ToolTip="Abre tu cliente de correo con el asunto y reporte prellenados">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="📧" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Enviar por Correo"/>
+                                    <TextBlock Text="Enviar por Correo a Soporte"/>
                                 </StackPanel>
                             </Button>
 
-                            <Button x:Name="btnTeamsSupport" Grid.Column="2" Style="{StaticResource PillButtonStyle}">
+                            <Button x:Name="btnTeamsSupport" Grid.Column="2" Style="{StaticResource PillButtonStyle}" ToolTip="Copia el reporte al portapapeles y abre Microsoft Teams">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="💬" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Pegar en Teams"/>
+                                    <TextBlock Text="Pegar en Microsoft Teams"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
@@ -435,7 +638,10 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 </Border>
 
                 <!-- 2.5.5 PANEL DE CONFIGURACIÓN DE IMPRESORA DE RED TCP/IP -->
-                <Border x:Name="panelPrinterConfig" Visibility="Collapsed" Background="#11131F" BorderBrush="#FF7A00" BorderThickness="1.5" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                <Border x:Name="panelPrinterConfig" Visibility="Collapsed" Background="#111320" BorderBrush="#FF7A00" BorderThickness="1.5" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#FF7A00" BlurRadius="14" Direction="270" ShadowDepth="1" Opacity="0.35"/>
+                    </Border.Effect>
                     <StackPanel>
                         <Grid Margin="0,0,0,14">
                             <Grid.ColumnDefinitions>
@@ -482,7 +688,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="txtPrinterIp" Text="192.168.1.100" Background="#0A0B14" Foreground="#FFD180" BorderBrush="#2A2E45" Padding="10,8" FontSize="13" FontFamily="Consolas"/>
-                                    <Button x:Name="btnTestPrinterSocket" Grid.Column="1" Content="📡 Probar IP" Style="{StaticResource PillButtonStyle}" Margin="8,0,0,0" Padding="12,6" FontSize="11" Cursor="Hand" ToolTip="Verificar conectividad al puerto 9100"/>
+                                    <Button x:Name="btnTestPrinterSocket" Grid.Column="1" Content="📡 Probar IP" Style="{StaticResource PillButtonStyle}" Margin="8,0,0,0" Padding="12,6" FontSize="11" Cursor="Hand" ToolTip="Verificar conectividad al socket TCP IP:9100"/>
                                 </Grid>
                             </StackPanel>
 
@@ -508,7 +714,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                             <TextBlock x:Name="txtPrinterTestResult" Text="Listo para configurar. Ingresa los datos y haz clic en Instalar." FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <Button x:Name="btnCancelPrinter" Content="Cancelar" Style="{StaticResource PillButtonStyle}" Margin="0,0,8,0" Padding="12,8" FontSize="12" Cursor="Hand"/>
-                                <Button x:Name="btnRestartSpoolerQuick" Content="⚡ Desatascar Cola" Style="{StaticResource PillButtonStyle}" Margin="0,0,8,0" Padding="14,8" FontSize="12" Cursor="Hand" ToolTip="Reinicia el servicio Spooler"/>
+                                <Button x:Name="btnRestartSpoolerQuick" Content="⚡ Desatascar Cola" Style="{StaticResource PillButtonStyle}" Margin="0,0,8,0" Padding="14,8" FontSize="12" Cursor="Hand" ToolTip="Reinicia el servicio Spooler de Windows"/>
                                 <Button x:Name="btnInstallPrinter" Content="🖨️ Instalar y Configurar Impresora" Style="{StaticResource HeroButtonStyle}" Padding="18,8" FontSize="12" Cursor="Hand"/>
                             </StackPanel>
                         </Grid>
@@ -516,7 +722,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 </Border>
 
                 <!-- 2.6 CATÁLOGO DE ACCIONES POR SÍNTOMA -->
-                <TextBlock Text="O ELIGE QUÉ DESEAS SOLUCIONAR:" FontSize="12" FontWeight="Bold" Foreground="#64748B" Margin="2,4,0,10"/>
+                <TextBlock Text="O ELIGE QUÉ DESEAS SOLUCIONAR:" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="2,4,0,10"/>
 
                 <Grid Margin="0,0,0,14">
                     <Grid.RowDefinitions>
@@ -532,116 +738,116 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                     </Grid.ColumnDefinitions>
 
                     <!-- Tile 1: Audio -->
-                    <Button x:Name="btnTileAudio" Grid.Row="0" Grid.Column="0" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12">
+                    <Button x:Name="btnTileAudio" Grid.Row="0" Grid.Column="0" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12" ToolTip="Reinicia los controladores de audio de Windows (Audiosrv, AudioEndpointBuilder)">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#281A38" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#281A38" BorderBrush="#4A266A" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🎧" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Audio y Micrófono" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
                                 <TextBlock Text="Sin sonido o micro en Teams" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
 
                     <!-- Tile 2: Internet -->
-                    <Button x:Name="btnTileWifi" Grid.Row="0" Grid.Column="2" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12">
+                    <Button x:Name="btnTileWifi" Grid.Row="0" Grid.Column="2" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12" ToolTip="Limpia caché DNS (flushdns), renueva IP y reinicia interfaces de red">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#142B36" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#102A36" BorderBrush="#1C556D" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🌐" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Internet y Red" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
                                 <TextBlock Text="Sin conexión o DNS caído" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
 
                     <!-- Tile 3: Impresora -->
-                    <Button x:Name="btnTileSpooler" Grid.Row="0" Grid.Column="4" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12">
+                    <Button x:Name="btnTileSpooler" Grid.Row="0" Grid.Column="4" Style="{StaticResource SymptomTileStyle}" Margin="0,0,0,12" ToolTip="Desatasca la cola de impresión o abre el instalador de impresoras de red IP:9100">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#382E14" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#382E14" BorderBrush="#6B531C" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🖨️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Impresora" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
-                                <TextBlock Text="Documentos atascados en cola" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                                <TextBlock Text="Impresoras" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
+                                <TextBlock Text="Cola atascada o instalar red" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
 
                     <!-- Tile 4: Pantalla -->
-                    <Button x:Name="btnTileExplorer" Grid.Row="1" Grid.Column="0" Style="{StaticResource SymptomTileStyle}">
+                    <Button x:Name="btnTileExplorer" Grid.Row="1" Grid.Column="0" Style="{StaticResource SymptomTileStyle}" ToolTip="Reinicia el proceso explorer.exe para desbloquear barra de tareas y ventanas">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#142038" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#142038" BorderBrush="#223E6B" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🖥️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Pantalla y Barra" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
                                 <TextBlock Text="Ventanas trabadas o congeladas" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
 
                     <!-- Tile 5: Actualizar Apps -->
-                    <Button x:Name="btnTileUpgrade" Grid.Row="1" Grid.Column="2" Style="{StaticResource SymptomTileStyle}">
+                    <Button x:Name="btnTileUpgrade" Grid.Row="1" Grid.Column="2" Style="{StaticResource SymptomTileStyle}" ToolTip="Escanea con Winget y descarga actualizaciones automáticas de software">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#143620" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#12341F" BorderBrush="#1C5E37" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🔄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Actualizar Programas" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
                                 <TextBlock Text="Buscar y descargar parches" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
 
                     <!-- Tile 6: Limpieza Perfil -->
-                    <Button x:Name="btnTileCleanProfile" Grid.Row="1" Grid.Column="4" Style="{StaticResource SymptomTileStyle}">
+                    <Button x:Name="btnTileCleanProfile" Grid.Row="1" Grid.Column="4" Style="{StaticResource SymptomTileStyle}" ToolTip="Respalda datos del perfil y repara configuraciones dañadas de usuario">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Background="#382214" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                            <Border Background="#382214" BorderBrush="#6B3A1C" BorderThickness="1" CornerRadius="8" Width="38" Height="38" Margin="0,0,12,0">
                                 <TextBlock Text="🧹" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Limpieza de Perfil" FontWeight="Bold" FontSize="13" Foreground="#FFFFFF"/>
                                 <TextBlock Text="Respaldo y restauración segura" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="›" FontSize="20" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
                         </Grid>
                     </Button>
                 </Grid>
@@ -650,7 +856,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                 <Button x:Name="btnToggleConsole" Content="⚙️ Opciones avanzadas y consola técnica ▾" Background="Transparent" Foreground="#64748B" BorderThickness="0" FontSize="12" Cursor="Hand" Margin="0,6,0,10" HorizontalAlignment="Center"/>
 
                 <!-- 2.8 PANEL DE CONSOLA TÉCNICA (COLLAPSIBLE) -->
-                <Border x:Name="panelConsole" Visibility="Collapsed" Background="#0A0B12" BorderBrush="#1F2338" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,0,10">
+                <Border x:Name="panelConsole" Visibility="Collapsed" Background="#080910" BorderBrush="#1C2033" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,0,10">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -670,7 +876,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                         </Grid>
 
                         <TextBox x:Name="txtLogs" Grid.Row="1"
-                                 Background="#06070B" 
+                                 Background="#040508" 
                                  Foreground="#86EFAC" 
                                  CaretBrush="#FF7A00"
                                  FontFamily="Consolas, 'Cascadia Code', 'Lucida Console', Courier New"
@@ -678,7 +884,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                                  IsReadOnly="True"
                                  TextWrapping="Wrap"
                                  VerticalScrollBarVisibility="Auto"
-                                 BorderBrush="#191B28"
+                                 BorderBrush="#151724"
                                  Padding="8"/>
                     </Grid>
                 </Border>
@@ -687,7 +893,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
         </ScrollViewer>
 
         <!-- 3. FOOTER / STATUS BAR -->
-        <Border Grid.Row="2" Background="#121320" BorderBrush="#1E2033" BorderThickness="1" CornerRadius="8" Padding="14,8" Margin="0,10,0,0">
+        <Border Grid.Row="2" Background="#0F101C" BorderBrush="#1B1E30" BorderThickness="1" CornerRadius="8" Padding="14,8" Margin="0,10,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

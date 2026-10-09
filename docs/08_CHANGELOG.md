@@ -7,6 +7,11 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 ## [1.2.1] - 2026-10-09
 
 ### Añadido (Added)
+- **Mejoras de UX y Micro-interacciones Táctiles en WPF (`AsistenciaOrange.ps1`)**:
+  - Implementación de elevación y transformaciones de escala en hover (`1.02x` / `1.03x` / `1.04x`) y compresión táctil al clic (`0.96x` - `0.98x`).
+  - Resplandores dinámicos con `DropShadowEffect` reactivos al ratón en botones principales y tarjetas de síntomas.
+  - Telemetría de hardware rediseñada con chips de datos encapsulados e iconos temáticos (`💻 Equipo`, `👤 Usuario`, `🌐 IP`, `⚡ RAM`).
+  - Tooltips contextuales explicativos en cada acción y control interactivo.
 - **Configurador de Impresoras de Red (TCP/IP Puerto 9100)**:
   - Formulario interactivo en WPF para configuración de impresoras de red por IP y puerto estándar 9100 RAW.
   - Asignación de nombre personalizado, prueba de socket en vivo (`Test-PrinterPort9100`) y selección automática de controladores del sistema.

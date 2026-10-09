@@ -238,8 +238,8 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 1. HEADER PRINCIPAL -->
-        <Border Grid.Row="0" Background="#141624" BorderBrush="#23263B" BorderThickness="1" CornerRadius="12" Padding="18,12" Margin="0,0,0,16">
+        <!-- 1. HEADER PRINCIPAL (ARRASTRABLE Y CON CONTROLES) -->
+        <Border x:Name="headerBorder" Grid.Row="0" Background="#141624" BorderBrush="#23263B" BorderThickness="1" CornerRadius="12" Padding="18,12" Margin="0,0,0,16" Cursor="Arrow">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -256,15 +256,17 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Acciones del Header: Estado y Botón de Salir -->
+                <!-- Acciones del Header: Estado y Botones de Ventana -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#11291E" BorderBrush="#1D533A" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,10,0">
+                    <Border Background="#11291E" BorderBrush="#1D533A" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Administrador Activo" FontSize="12" FontWeight="SemiBold" Foreground="#4ADE80" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="btnHeaderClose" Content="✕ Salir" Style="{StaticResource PillNoStyle}" Padding="14,6" FontSize="12" FontWeight="Bold" Cursor="Hand" ToolTip="Cerrar Asistencia Orange (Tecla Esc)"/>
+                    <Button x:Name="btnHeaderMin" Content="—" Style="{StaticResource PillButtonStyle}" Padding="10,4" FontSize="11" Margin="0,0,6,0" Cursor="Hand" ToolTip="Minimizar ventana"/>
+                    <Button x:Name="btnHeaderMax" Content="□" Style="{StaticResource PillButtonStyle}" Padding="10,4" FontSize="11" Margin="0,0,6,0" Cursor="Hand" ToolTip="Maximizar / Restaurar"/>
+                    <Button x:Name="btnHeaderClose" Content="✕ Salir" Style="{StaticResource PillNoStyle}" Padding="12,5" FontSize="11" FontWeight="Bold" Cursor="Hand" ToolTip="Cerrar Asistencia Orange (Tecla Esc)"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -632,6 +634,9 @@ $lblHostName        = $window.FindName("lblHostName")
 $lblUserName        = $window.FindName("lblUserName")
 $lblIpAddress       = $window.FindName("lblIpAddress")
 $lblRamTotal        = $window.FindName("lblRamTotal")
+$headerBorder       = $window.FindName("headerBorder")
+$btnHeaderMin       = $window.FindName("btnHeaderMin")
+$btnHeaderMax       = $window.FindName("btnHeaderMax")
 $btnHeaderClose     = $window.FindName("btnHeaderClose")
 
 $btnHeroRepairAll   = $window.FindName("btnHeroRepairAll")
@@ -820,6 +825,8 @@ function Run-AsyncAction {
     $panelResult.Visibility = [System.Windows.Visibility]::Collapsed
     $panelSupport.Visibility = [System.Windows.Visibility]::Collapsed
     $panelProgress.Visibility = [System.Windows.Visibility]::Visible
+    $panelConsole.Visibility = [System.Windows.Visibility]::Visible
+    $btnToggleConsole.Content = "⚙️ Ocultar consola técnica ▴"
     $txtActionTitle.Text = $ActionName
     $txtStepBadge.Text = "Iniciando..."
     $txtStepDescription.Text = "Preparando ejecución de Windows..."
@@ -991,23 +998,79 @@ $btnTileExplorer.Add_Click({
     }
 })
 
-# 6. Actualizar Programas
+# 6. Actualizar Programas con Feedback en Vivo
 $btnTileUpgrade.Add_Click({
     Run-AsyncAction "Actualización de Programas Instalados" {
-        Set-GuiProgress 1 3 "Buscando actualizaciones disponibles con winget..." 25
-        Write-GuiLog "Consultando catálogo de actualizaciones de winget..." "INFO"
+        Set-GuiProgress 1 3 "Escaneando aplicaciones instaladas con winget..." 20
+        Write-GuiLog "Buscando aplicaciones con actualizaciones pendientes..." "INFO"
+        
         $raw = winget upgrade | Out-String
         $lines = $raw -split "`r?`n"
-        foreach ($line in $lines) {
-            if ($line.Trim() -and -not $line.Contains("---")) { Write-GuiLog $line "INFO" }
+        
+        # Parsear tabla de aplicaciones
+        $headerIndex = -1
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^Name\s+Id\s+Version') {
+                $headerIndex = $i
+                break
+            }
         }
 
-        Set-GuiProgress 2 3 "Descargando e instalando parches de software..." 65
-        Write-GuiLog "Descargando e instalando actualizaciones de forma silenciosa..." "INFO"
-        winget upgrade --all --include-unknown --silent --accept-source-agreements --accept-package-agreements | Out-Null
+        $apps = @()
+        if ($headerIndex -ge 0) {
+            $header = $lines[$headerIndex]
+            $idStart = $header.IndexOf("Id")
+            $versionStart = $header.IndexOf("Version")
+            $availableStart = $header.IndexOf("Available")
 
-        Set-GuiProgress 3 3 "Finalizando verificación..." 95
-        Write-GuiLog "Proceso de actualización winget finalizado." "OK"
+            for ($i = $headerIndex + 2; $i -lt $lines.Count; $i++) {
+                $line = $lines[$i]
+                if ([string]::IsNullOrWhiteSpace($line)) { break }
+                if ($line -match '^\d+ upgrades? available' -or $line -match 'upgrade available') { break }
+                if ($line.Length -lt $idStart) { continue }
+
+                $name = $line.Substring(0, $idStart).Trim()
+                $id = if ($availableStart -gt $idStart) { $line.Substring($idStart, [Math]::Min($versionStart, $line.Length) - $idStart).Trim() } else { "" }
+                $version = if ($line.Length -gt $versionStart) { $line.Substring($versionStart, [Math]::Min($availableStart, $line.Length) - $versionStart).Trim() } else { "" }
+                $available = if ($line.Length -gt $availableStart) { $line.Substring($availableStart).Trim() } else { "" }
+
+                if ($name -and $id) {
+                    $apps += [PSCustomObject]@{ Name = $name; Id = $id; Version = $version; Available = $available }
+                }
+            }
+        }
+
+        if ($apps.Count -eq 0) {
+            Set-GuiProgress 3 3 "Tu equipo está completamente al día" 100
+            Write-GuiLog "¡Excelente! No se encontraron actualizaciones pendientes. Todas las apps están al día." "OK"
+            Start-Sleep -Seconds 1
+        } else {
+            Write-GuiLog "Se encontraron $($apps.Count) aplicaciones pendientes por actualizar:" "INFO"
+            foreach ($a in $apps) {
+                Write-GuiLog "  • $($a.Name) (Versión actual: $($a.Version) -> Disponible: $($a.Available))" "INFO"
+            }
+
+            $current = 0
+            $total = $apps.Count
+            foreach ($a in $apps) {
+                $current++
+                $pct = [Math]::Round(25 + (($current / $total) * 70))
+                Set-GuiProgress 2 3 "[$current/$total] Actualizando: $($a.Name)..." $pct
+                Write-GuiLog "============================================================" "INFO"
+                Write-GuiLog "[$current/$total] Descargando e instalando parche para: $($a.Name) ($($a.Id))..." "INFO"
+
+                $proc = Start-Process -FilePath "winget" -ArgumentList "upgrade --id `"$($a.Id)`" --silent --include-unknown --accept-package-agreements --accept-source-agreements" -Wait -PassThru -NoNewWindow
+                
+                if ($proc.ExitCode -eq 0) {
+                    Write-GuiLog "✓ $($a.Name) actualizado exitosamente." "OK"
+                } else {
+                    Write-GuiLog "! $($a.Name) finalizó con código ($($proc.ExitCode))." "WARN"
+                }
+            }
+
+            Set-GuiProgress 3 3 "Verificación y actualización finalizada" 100
+            Write-GuiLog "Todas las aplicaciones seleccionadas fueron procesadas." "OK"
+        }
     }
 })
 
@@ -1118,7 +1181,31 @@ $btnCopyLog.Add_Click({
     } catch {}
 })
 
-# Eventos de Cierre y Salida Limpia
+# Control de Ventana (Arrastrar, Minimizar, Maximizar y Salir)
+$headerBorder.Add_MouseLeftButtonDown({
+    if ($_.ClickCount -eq 2) {
+        if ($window.WindowState -eq [System.Windows.WindowState]::Maximized) {
+            $window.WindowState = [System.Windows.WindowState]::Normal
+        } else {
+            $window.WindowState = [System.Windows.WindowState]::Maximized
+        }
+    } elseif ($_.ButtonState -eq [System.Windows.Input.MouseButtonState]::Pressed) {
+        try { $window.DragMove() } catch {}
+    }
+})
+
+$btnHeaderMin.Add_Click({
+    $window.WindowState = [System.Windows.WindowState]::Minimized
+})
+
+$btnHeaderMax.Add_Click({
+    if ($window.WindowState -eq [System.Windows.WindowState]::Maximized) {
+        $window.WindowState = [System.Windows.WindowState]::Normal
+    } else {
+        $window.WindowState = [System.Windows.WindowState]::Maximized
+    }
+})
+
 $btnHeaderClose.Add_Click({
     $window.Close()
 })

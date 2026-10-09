@@ -14,8 +14,12 @@
 
 ## 🚀 Tareas Completadas
 
+- [x] **Compilación de Ejecutables Nativos Windows (`.exe`)**
+  - Generación de binario standalone `AsistenciaOrange.exe` (subsystem `WinExe` sin ventana CMD de fondo, UAC integrado, modo STA para WPF).
+  - Generación de binario standalone `utilities/UtilidadOrangeLatam.exe` para administradores TI.
+  - Creación del script y lanzador maestro `compilar-binarios.ps1` y `compilar-binarios.bat`.
 - [x] **Portal de Auto-Atención Nativo de Escritorio (WPF / XAML)**
-  - Construcción de aplicación 100% nativa en Windows (`AsistenciaOrange.ps1` y `AsistenciaOrange.bat`).
+  - Construcción de aplicación 100% nativa en Windows (`AsistenciaOrange.ps1`, `AsistenciaOrange.bat` y `AsistenciaOrange.exe`).
   - Eliminación de dependencias de servidores HTTP, puertos locales de red y navegadores web.
   - Soporte de tarjeta 1-Click Auto-Fix, 6 tarjetas de síntomas, telemetría WMI, barra de progreso nativa en tiempo real y consola integrada.
   - Flujo de feedback posterior y generación automática de reporte para Soporte TI (Copiar, Correo, Teams).
@@ -61,7 +65,6 @@
 ## 📋 Tareas Pendientes / Roadmap
 
 - [ ] **Módulo `utilities/`:**
-  - [ ] Opción en la GUI para compilar `UtilidadOrangeLatam.GUI.ps1` a `UtilidadOrangeLatam.exe` mediante `ps2exe` con un solo clic.
   - [ ] Añadir selector interactivo para reiniciar adaptadores Ethernet específicos en adición al adaptador Wi-Fi.
 - [ ] **Módulo `InfoEquipo/`:**
   - [ ] Crear versión con interfaz gráfica WPF para visualizar tarjetas con gráficos de uso de recursos en tiempo real.

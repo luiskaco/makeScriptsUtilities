@@ -4,14 +4,24 @@
     Herramienta para reinicio rápido de servicios y subsistemas de Windows.
 #>
 
-# Resolver ruta absoluta del script de forma robusta
-$targetScript = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $PSScriptRoot "UtilidadOrangeLatam.GUI.ps1" }
+# Resolver ruta base y script de forma segura en .exe o .ps1
+$script:appDir = if ($PSScriptRoot) { 
+    $PSScriptRoot 
+} elseif ($PSCommandPath) { 
+    [System.IO.Path]::GetDirectoryName($PSCommandPath) 
+} elseif ($MyInvocation.MyCommand.Path) { 
+    [System.IO.Path]::GetDirectoryName($MyInvocation.MyCommand.Path) 
+} else { 
+    [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
+}
+
+$targetScript = [System.IO.Path]::Combine($script:appDir, "UtilidadOrangeLatam.GUI.ps1")
 
 # Auto-elevación a permisos de Administrador (solo cuando corre directamente como script .ps1 fuera del .exe)
 $isExe = [System.AppDomain]::CurrentDomain.FriendlyName -match '\.exe$' -and [System.AppDomain]::CurrentDomain.FriendlyName -notmatch 'powershell'
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-if (-not $isExe -and -not $isAdmin -and (Test-Path $targetScript)) {
+if (-not $isExe -and -not $isAdmin -and [System.IO.File]::Exists($targetScript)) {
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "powershell.exe"

@@ -8,14 +8,24 @@
 [CmdletBinding()]
 param()
 
-# Resolver ruta absoluta del script
-$targetScript = if ($PSCommandPath) { $PSCommandPath } elseif ($MyInvocation.MyCommand.Path) { $MyInvocation.MyCommand.Path } else { Join-Path $PSScriptRoot "AsistenciaOrange.ps1" }
+# Resolver ruta base y script de forma segura en .exe o .ps1
+$script:appDir = if ($PSScriptRoot) { 
+    $PSScriptRoot 
+} elseif ($PSCommandPath) { 
+    [System.IO.Path]::GetDirectoryName($PSCommandPath) 
+} elseif ($MyInvocation.MyCommand.Path) { 
+    [System.IO.Path]::GetDirectoryName($MyInvocation.MyCommand.Path) 
+} else { 
+    [System.AppDomain]::CurrentDomain.BaseDirectory.TrimEnd('\')
+}
+
+$targetScript = [System.IO.Path]::Combine($script:appDir, "AsistenciaOrange.ps1")
 
 # Auto-elevación segura a Administrador (solo cuando corre directamente como script .ps1 fuera del .exe)
 $isExe = [System.AppDomain]::CurrentDomain.FriendlyName -match '\.exe$' -and [System.AppDomain]::CurrentDomain.FriendlyName -notmatch 'powershell'
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-if (-not $isExe -and -not $isAdmin -and (Test-Path $targetScript)) {
+if (-not $isExe -and -not $isAdmin -and [System.IO.File]::Exists($targetScript)) {
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "powershell.exe"
@@ -1013,10 +1023,9 @@ $btnTileCleanProfile.Add_Click({
     if ($confirm -eq [System.Windows.MessageBoxResult]::Yes) {
         Run-AsyncAction "Limpieza y Respaldo de Perfil" {
             Set-GuiProgress 1 2 "Iniciando respaldo seguro con Robocopy..." 40
-            $rootDir = Split-Path -Parent $targetScript
-            $scriptPath = Join-Path $rootDir "Limpiar-Perfil.bat"
+            $scriptPath = [System.IO.Path]::Combine($script:appDir, "Limpiar-Perfil.bat")
 
-            if (Test-Path $scriptPath) {
+            if ([System.IO.File]::Exists($scriptPath)) {
                 Write-GuiLog "Ejecutando $scriptPath..." "INFO"
                 $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"$scriptPath`"" -Wait -NoNewWindow -PassThru
                 
@@ -1024,7 +1033,7 @@ $btnTileCleanProfile.Add_Click({
                 Write-GuiLog "Respaldo completado en tu Escritorio: Respaldo_Usuario" "OK"
                 Write-GuiLog "Fondo de pantalla oficial restablecido." "OK"
             } else {
-                throw "No se encontró el archivo Limpiar-Perfil.bat en $rootDir"
+                throw "No se encontró el archivo Limpiar-Perfil.bat en $($script:appDir)"
             }
         }
     }

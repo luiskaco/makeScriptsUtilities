@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Asistencia Orange — Portal de Auto-Atención y Diagnóstico (WPF Nativo)
     Aplicación nativa de escritorio para auto-reparación rápida de Windows,
@@ -698,9 +698,9 @@ function Set-GuiProgress {
         $txtStepDescription.Text = $Label
         $txtProgressPercent.Text = "$Percent%"
         $progressBarAction.Value = $Percent
-        $txtStatusMessage.Text = "Paso $Step de $Total: $Label"
+        $txtStatusMessage.Text = "Paso $Step de $($Total): $Label"
     })
-    Write-GuiLog "[Paso $Step/$Total] ($Percent%) $Label" "STEP"
+    Write-GuiLog ("[Paso {0}/{1}] ({2}%) {3}" -f $Step, $Total, $Percent, $Label) "STEP"
 }
 
 # Función para Habilitar / Deshabilitar Botones

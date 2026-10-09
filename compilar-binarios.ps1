@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Compilador de binarios ejecutables (.exe) para todas las herramientas de Orange Latam.
 #>
@@ -10,17 +10,17 @@ $root = $PSScriptRoot
 if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Path }
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "    COMPILADOR DE BINARIOS EXECUTABLES (.EXE)" -ForegroundColor Yellow
+Write-Host "    COMPILADOR DE BINARIOS EJECUTABLES (.EXE)" -ForegroundColor Yellow
 Write-Host "==================================================" -ForegroundColor Cyan
 
-# Asegurar módulo ps2exe
+# Asegurar modulo ps2exe
 if (-not (Get-Module -ListAvailable ps2exe)) {
     Write-Host "[*] Instalando modulo ps2exe..." -ForegroundColor Gray
     Install-Module -Name ps2exe -Scope CurrentUser -Force -SkipPublisherCheck
 }
 Import-Module ps2exe -Force
 
-# 1. Asistencia Orange (Portal de Auto-Atención WPF)
+# 1. Asistencia Orange (Portal de Auto-Atencion WPF)
 $srcPortal = Join-Path $root "AsistenciaOrange.ps1"
 $outPortal = Join-Path $root "AsistenciaOrange.exe"
 if (Test-Path $srcPortal) {
@@ -50,7 +50,7 @@ if (Test-Path $srcUpdate) {
         -company "Orange Latam" -version "1.1.0.0"
 }
 
-Write-Host "`n[✓] ¡Compilación finalizada exitosamente!" -ForegroundColor Cyan
+Write-Host "`n[OK] Compilacion finalizada exitosamente." -ForegroundColor Cyan
 Write-Host "Binarios generados:" -ForegroundColor Gray
 Write-Host " - $outPortal" -ForegroundColor White
 Write-Host " - $outUtil" -ForegroundColor White

@@ -4,6 +4,14 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 
 ---
 
+## [1.1.0] - 2026-10-10
+
+### Añadido (Added)
+- **`README.md`**: Guía integral del proyecto con badges de compatibilidad, descripción técnica de los módulos `ActualizarApps` e `InfoEquipo`, especificaciones de sistema, comandos de ejecución y guía de compilación con `ps2exe`.
+- **Reorganización de workspace**: Traslado de `CLAUDE.md` a la raíz del proyecto para centralizar directivas de compilación y control de dependencias.
+
+---
+
 ## [1.0.0] - 2026-10-06
 
 ### Añadido (Added)

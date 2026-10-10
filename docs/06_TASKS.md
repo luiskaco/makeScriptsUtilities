@@ -26,8 +26,10 @@
   - Servidor local HTTP y API REST en PowerShell (`web/server.ps1`) con auto-elevación UAC y apertura automática del navegador predeterminado.
   - Consola de logs en vivo en el navegador con terminal interactiva, auto-scroll y botones de copiar/limpiar.
   - Lanzadores directos `Abrir-Utilidad-Web.bat` y `utilities/Abrir-Web.bat`.
-- [x] **Estructura Completa de Documentación `/docs`**
+- [x] **Estructura Completa de Documentación `/docs` y `README.md`**
   - Creación de los documentos PRD, SDD, SYSTEM SPEC, DATA MODEL, ARCHITECTURE, TASKS, DECISIONS, CHANGELOG y CONTEXT.
+  - Creación de `README.md` exhaustivo con badges, arquitectura del repositorio, guía de ejecución, requisitos y procedimiento de compilación con `ps2exe`.
+  - Reorganización de `CLAUDE.md` a la raíz del proyecto para reglas globales de desarrollo.
 
 ---
 

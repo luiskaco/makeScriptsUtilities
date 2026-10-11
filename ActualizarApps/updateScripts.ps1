@@ -199,11 +199,36 @@ function Get-WingetErrorMessage {
     # actualización pero no puede aplicarla in-place porque la instalación actual
     # y la nueva usan tecnologías distintas (MSI vs EXE); "--force" NO lo resuelve
     # (probado), hace falta desinstalar y reinstalar a mano.
+    # -1978335189 (0x8A15002B, "no applicable update"): visto el 2026-10-10 cuando un
+    # "winget upgrade --all" lanzado a mano en paralelo ya había instalado la versión
+    # nueva antes de que este script llegara al paquete.
     param([int]$Code)
     switch ($Code) {
         -1978335090 { return "tecnología de instalación distinta a la actual — desinstalar y reinstalar a mano" }
+        -1978335189 { return "sin actualización aplicable (posiblemente ya actualizada por otro proceso)" }
         default { return "código $Code" }
     }
+}
+
+function Wait-OtherWinget {
+    # Dos winget instalando a la vez se pisan: archivos en uso (0x80070020), installs
+    # que quedan esperando el lock hasta el timeout, y "no applicable update" para lo
+    # que el otro proceso ya actualizó. Antes de empezar se espera a que termine.
+    param([int]$TimeoutSeconds = 600)
+    $others = @(Get-Process -Name winget -ErrorAction SilentlyContinue)
+    if ($others.Count -eq 0) { return $true }
+
+    Write-Host "  ⚠ Ya hay $($others.Count) proceso(s) de winget corriendo (PID $(($others.Id) -join ', '))." -ForegroundColor Yellow
+    Write-Host "    Esperando a que terminen (máx. $([int]($TimeoutSeconds / 60)) min)..." -ForegroundColor Gray
+    $timer = [System.Diagnostics.Stopwatch]::StartNew()
+    while ($timer.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        Start-Sleep -Seconds 5
+        if (@(Get-Process -Name winget -ErrorAction SilentlyContinue).Count -eq 0) {
+            Write-Host ("  ✔ winget libre tras {0:mm\:ss}" -f $timer.Elapsed) -ForegroundColor Green
+            return $true
+        }
+    }
+    return $false
 }
 
 function Write-AppsTable {
@@ -238,6 +263,10 @@ $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $results = @()
 
 try {
+    if (-not (Wait-OtherWinget -TimeoutSeconds 600)) {
+        throw "Otro proceso de winget sigue corriendo tras 10 min. Cerralo o esperá a que termine y volvé a ejecutar."
+    }
+
     Write-Section -Title "Actualizando repositorio de fuentes" -Icon "①"
     winget source update
 
@@ -265,9 +294,11 @@ try {
             $appTimer.Stop()
 
             $ok = (-not $result.TimedOut -and $result.Code -eq 0)
+            $skipped = (-not $result.TimedOut -and $result.Code -eq -1978335189)
             $results += [PSCustomObject]@{
                 Name     = $app.Name
                 Ok       = $ok
+                Skipped  = $skipped
                 Code     = $result.Code
                 TimedOut = $result.TimedOut
                 Elapsed  = "{0:mm\:ss}" -f $appTimer.Elapsed
@@ -275,6 +306,8 @@ try {
 
             if ($result.TimedOut) {
                 Write-Host ("  ⏱ {0,-30} sin respuesta tras {1} — cancelado" -f $app.Name, $results[-1].Elapsed) -ForegroundColor Yellow
+            } elseif ($skipped) {
+                Write-Host ("  ↷ {0,-30} {1}" -f $app.Name, (Get-WingetErrorMessage $result.Code)) -ForegroundColor Yellow
             } elseif ($ok) {
                 Write-Host ("  ✔ {0,-30} ({1})" -f $app.Name, $results[-1].Elapsed) -ForegroundColor Green
             } else {
@@ -344,19 +377,22 @@ try {
 
     $stopwatch.Stop()
     $elapsed = "{0:mm\:ss}" -f $stopwatch.Elapsed
-    $failed = @($results | Where-Object { -not $_.Ok })
+    $failed = @($results | Where-Object { -not $_.Ok -and -not $_.Skipped })
+    $skippedList = @($results | Where-Object { $_.Skipped })
+    $updatedCount = @($results | Where-Object { $_.Ok }).Count
+    $skippedNote = if ($skippedList.Count -gt 0) { " $($skippedList.Count) sin actualización aplicable." } else { "" }
 
     if ($results.Count -eq 0) {
         Write-Summary -Status "✔ PROCESO FINALIZADO CORRECTAMENTE" -Color Green -Detail "No había actualizaciones pendientes." -ElapsedStr $elapsed -LogPath $logFile
     } elseif ($failed.Count -eq 0) {
-        Write-Summary -Status "✔ PROCESO FINALIZADO CORRECTAMENTE" -Color Green -Detail "$($results.Count) aplicación(es) actualizada(s) con éxito." -ElapsedStr $elapsed -LogPath $logFile
+        Write-Summary -Status "✔ PROCESO FINALIZADO CORRECTAMENTE" -Color Green -Detail "$updatedCount aplicación(es) actualizada(s) con éxito.$skippedNote" -ElapsedStr $elapsed -LogPath $logFile
     } else {
         Write-Section -Title "Aplicaciones con errores" -Icon "⚠"
         foreach ($f in $failed) {
             $reason = if ($f.TimedOut) { "sin respuesta (posible prompt bloqueado)" } else { Get-WingetErrorMessage $f.Code }
             Write-Host ("  ✖ {0,-30} {1}" -f $f.Name, $reason) -ForegroundColor Red
         }
-        Write-Summary -Status "⚠ PROCESO FINALIZADO CON AVISOS" -Color Yellow -Detail "$($failed.Count) de $($results.Count) fallaron." -ElapsedStr $elapsed -LogPath $logFile
+        Write-Summary -Status "⚠ PROCESO FINALIZADO CON AVISOS" -Color Yellow -Detail "$($failed.Count) de $($results.Count) fallaron.$skippedNote"-ElapsedStr $elapsed -LogPath $logFile
     }
 } catch {
     $stopwatch.Stop()

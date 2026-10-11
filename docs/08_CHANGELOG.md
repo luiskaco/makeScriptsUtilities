@@ -4,6 +4,15 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 
 ---
 
+## [1.1.1] - 2026-10-10
+
+### Corregido (Fixed)
+- **`ActualizarApps`**: si ya hay otro `winget` corriendo (por ejemplo, un `winget upgrade --all` lanzado a mano), el script espera hasta 10 min a que termine antes de empezar. Correr los dos a la vez producía errores falsos: archivo en uso (`0x80070020`), timeouts y "no applicable update".
+- **`ActualizarApps`**: el código `-1978335189` (`0x8A15002B`) se muestra como "sin actualización aplicable" en amarillo y ya no cuenta como fallo en el resumen.
+- `ActualizarApps.exe` recompilado.
+
+---
+
 ## [1.1.0] - 2026-10-10
 
 ### Añadido (Added)

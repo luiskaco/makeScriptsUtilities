@@ -65,4 +65,4 @@
   - [ ] Programar `ActualizarApps` en el Programador de tareas (p. ej. domingos 22:00), activable/desactivable desde el panel.
   - [ ] Guardar el log del panel a archivo en `PanelUtilidades/logs/`, como hace `ActualizarApps`.
 - [ ] **Mantenimiento del repositorio:**
-  - [ ] Sacar de git los 28 logs de `ActualizarApps/logs/` que siguen versionados pese al `.gitignore` (`git rm --cached`).
+  - [x] Sacados de git los 34 logs versionados (28 de `ActualizarApps/logs/` y 6 de `InfoEquipo/logs/`) con `git rm --cached` (2026-10-16); los archivos siguen en disco.

@@ -14,6 +14,7 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 - Mantenimiento completo: un paso que falla ya no corta la secuencia.
 - Limpieza de perfil: pide confirmación, usa `/XJ` (no sigue las junctions heredadas de Documentos) y excluye `desktop.ini` también en Descargas.
 - "Actualizar todo" abre `ActualizarApps.exe` (con log y timeouts) en vez de un `winget upgrade --all` sin control.
+- `PanelUtilidades`: el tamaño inicial se ajusta al área útil de la pantalla (antes 1080×800 fijo, más alto que una pantalla 1280×752 en DIPs). Consola plegable (un error la vuelve a desplegar), tarjetas más compactas con el ícono al lado del título y dos columnas por debajo de 880 de ancho.
 
 ### Eliminado (Removed)
 - Panel web (`web/`), su lanzador `Abrir-Utilidad-Web.bat` y `Limpiar-Perfil.bat`.

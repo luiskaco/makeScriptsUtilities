@@ -353,12 +353,12 @@ function New-ActionCardXaml {
     @"
 <Border Style="{StaticResource Card}">
   <DockPanel>
-    <Button x:Name="$Name" DockPanel.Dock="Bottom" Content="$(ConvertTo-XmlText $ButtonText)" Style="{StaticResource $ButtonStyle}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+    <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="9" Background="#26$Color" VerticalAlignment="Top" Margin="0,0,14,0">
+      <TextBlock Text="$Glyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="17" Foreground="#FF$Color" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <Button x:Name="$Name" DockPanel.Dock="Bottom" Content="$(ConvertTo-XmlText $ButtonText)" Style="{StaticResource $ButtonStyle}" Padding="14,6" HorizontalAlignment="Left" Margin="0,12,0,0"/>
     <StackPanel>
-      <Border Width="38" Height="38" CornerRadius="9" Background="#26$Color" HorizontalAlignment="Left">
-        <TextBlock Text="$Glyph" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="18" Foreground="#FF$Color" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-      </Border>
-      <TextBlock Text="$(ConvertTo-XmlText $Title)" Style="{StaticResource CardTitle}"/>
+      <TextBlock Text="$(ConvertTo-XmlText $Title)" Style="{StaticResource CardTitle}" Margin="0,0,0,4"/>
       <TextBlock Text="$(ConvertTo-XmlText $Description)" Style="{StaticResource CardText}"/>
     </StackPanel>
   </DockPanel>
@@ -400,7 +400,7 @@ $infoCards = @(
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Utilidades de Windows · Orange Latam" Width="1080" Height="800" MinWidth="920" MinHeight="660"
+        Title="Utilidades de Windows · Orange Latam" MinWidth="760" MinHeight="560"
         WindowStartupLocation="CenterScreen" Background="#0A0B10" Foreground="#C5C9DB"
         FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" UseLayoutRounding="True">
   <Window.Resources>
@@ -453,7 +453,7 @@ $xaml = @"
       <Setter Property="BorderBrush" Value="#22253A"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="Padding" Value="18"/>
+      <Setter Property="Padding" Value="16"/>
       <Setter Property="Margin" Value="0,0,12,12"/>
     </Style>
     <Style x:Key="CardTitle" TargetType="TextBlock">
@@ -533,7 +533,7 @@ $xaml = @"
               <Border DockPanel.Dock="Top" BorderBrush="#1E2030" BorderThickness="0,0,0,1" Padding="20,0">
                 <TabPanel IsItemsHost="True"/>
               </Border>
-              <ContentPresenter ContentSource="SelectedContent" Margin="24,20,12,0"/>
+              <ContentPresenter ContentSource="SelectedContent" Margin="24,16,12,0"/>
             </DockPanel>
           </ControlTemplate>
         </Setter.Value>
@@ -546,7 +546,7 @@ $xaml = @"
         <Setter.Value>
           <ControlTemplate TargetType="TabItem">
             <Grid Background="Transparent" Cursor="Hand" Margin="0,0,8,0">
-              <ContentPresenter ContentSource="Header" Margin="12,12,12,14"/>
+              <ContentPresenter ContentSource="Header" Margin="12,9,12,11"/>
               <Border x:Name="line" Height="2" VerticalAlignment="Bottom" Background="#FF7A00" CornerRadius="1" Visibility="Hidden"/>
             </Grid>
             <ControlTemplate.Triggers>
@@ -567,16 +567,16 @@ $xaml = @"
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*" MinHeight="300"/>
       <RowDefinition Height="5"/>
-      <RowDefinition Height="180" MinHeight="90"/>
+      <RowDefinition x:Name="consoleRow" Height="170" MinHeight="90"/>
     </Grid.RowDefinitions>
 
-    <DockPanel Grid.Row="0" Margin="24,18,24,12">
+    <DockPanel Grid.Row="0" Margin="24,12,24,8">
       <Border DockPanel.Dock="Right" x:Name="adminBadge" CornerRadius="12" Padding="12,5" VerticalAlignment="Center" Background="#262ECC71">
         <TextBlock x:Name="adminText" FontSize="12" FontWeight="SemiBold" Foreground="#2ECC71"/>
       </Border>
       <StackPanel Orientation="Horizontal">
-        <Border Width="40" Height="40" CornerRadius="10" Background="#FF7A00">
-          <TextBlock Text="OL" FontSize="16" FontWeight="Bold" Foreground="#14100A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Border Width="34" Height="34" CornerRadius="9" Background="#FF7A00">
+          <TextBlock Text="OL" FontSize="14" FontWeight="Bold" Foreground="#14100A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
           <TextBlock Text="Utilidades de Windows" FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFF"/>
@@ -589,11 +589,11 @@ $xaml = @"
       <TabItem Header="Servicios">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <StackPanel Margin="0,0,12,18">
+            <StackPanel Margin="0,0,12,14">
               <TextBlock Text="Reinicio rápido de servicios" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Arreglos de un clic para fallos comunes de red, audio, impresión y el escritorio." Style="{StaticResource SectionText}"/>
             </StackPanel>
-            <UniformGrid Columns="3">
+            <UniformGrid x:Name="servicesGrid" Columns="3">
 $serviceCards
             </UniformGrid>
           </StackPanel>
@@ -603,14 +603,14 @@ $serviceCards
       <TabItem Header="Hardware">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel>
-            <DockPanel Margin="0,0,12,18">
+            <DockPanel Margin="0,0,12,14">
               <Button x:Name="btnRefreshHw" DockPanel.Dock="Right" Content="Volver a leer" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center"/>
               <StackPanel>
                 <TextBlock Text="Hardware y sistema" Style="{StaticResource SectionTitle}"/>
                 <TextBlock Text="Datos leídos de Windows (CIM) al abrir el panel." Style="{StaticResource SectionText}"/>
               </StackPanel>
             </DockPanel>
-            <UniformGrid Columns="3">
+            <UniformGrid x:Name="hwGrid" Columns="3">
 $infoCards
             </UniformGrid>
           </StackPanel>
@@ -679,7 +679,7 @@ $infoCards
       <TabItem Header="Limpieza de perfil">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel MaxWidth="760" HorizontalAlignment="Left">
-            <StackPanel Margin="0,0,12,18">
+            <StackPanel Margin="0,0,12,14">
               <TextBlock Text="Respaldo y limpieza del perfil" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Deja el Escritorio, Descargas y Documentos vacíos sin perder nada: todo pasa a una carpeta de respaldo." Style="{StaticResource SectionText}"/>
             </StackPanel>
@@ -698,19 +698,20 @@ $infoCards
       </TabItem>
     </TabControl>
 
-    <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" Background="#0A0B10" ResizeDirection="Rows"/>
+    <GridSplitter x:Name="consoleSplitter" Grid.Row="2" HorizontalAlignment="Stretch" Background="#0A0B10" ResizeDirection="Rows"/>
 
     <Border Grid.Row="3" Background="#07080C" BorderBrush="#1E2030" BorderThickness="0,1,0,0">
       <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="20,8,20,0">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
             <Button x:Name="btnCopyLog" Content="Copiar" Style="{StaticResource GhostButton}" Margin="0,0,6,0"/>
-            <Button x:Name="btnClearLog" Content="Limpiar" Style="{StaticResource GhostButton}"/>
+            <Button x:Name="btnClearLog" Content="Limpiar" Style="{StaticResource GhostButton}" Margin="0,0,6,0"/>
+            <Button x:Name="btnToggleLog" Content="Ocultar" Style="{StaticResource GhostButton}" ToolTip="Plegar o desplegar la consola"/>
           </StackPanel>
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <DockPanel VerticalAlignment="Center">
             <TextBlock Text="CONSOLA" FontSize="11" FontWeight="SemiBold" Foreground="#7E849E" VerticalAlignment="Center"/>
-            <TextBlock x:Name="statusText" Text="Listo" Margin="12,0,0,0" Foreground="#C5C9DB" VerticalAlignment="Center"/>
-          </StackPanel>
+            <TextBlock x:Name="statusText" Text="Listo" Margin="12,0,12,0" Foreground="#C5C9DB" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+          </DockPanel>
         </DockPanel>
         <ProgressBar x:Name="busyBar" DockPanel.Dock="Top" Height="2" Margin="20,8,20,0" IsIndeterminate="True"
                      Visibility="Hidden" Foreground="#FF7A00" Background="Transparent" BorderThickness="0"/>
@@ -725,8 +726,16 @@ $infoCards
 "@
 
 $window = [Windows.Markup.XamlReader]::Parse($xaml)
+
+# Tamaño inicial según el área útil (sin barra de tareas), en DIPs. Un alto fijo de
+# 800 no entraba en una pantalla 2560x1600 al 200 % (área útil 1280x752).
+$workArea = [Windows.SystemParameters]::WorkArea
+$window.Width = [Math]::Max($window.MinWidth, [Math]::Min(1120, $workArea.Width - 48))
+$window.Height = [Math]::Max($window.MinHeight, [Math]::Min(820, $workArea.Height - 32))
+
 $ui = @{}
 foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText', 'busyBar', 'logBox', 'btnCopyLog', 'btnClearLog',
+        'btnToggleLog', 'consoleRow', 'consoleSplitter', 'servicesGrid', 'hwGrid',
         'btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll', 'btnRefreshHw',
         'btnScan', 'btnRunUpdater', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget')) {
     $ui[$name] = $window.FindName($name)
@@ -767,6 +776,42 @@ function Add-LogLine {
     $paragraph.Inlines.Add($message)
     $ui.logBox.Document.Blocks.Add($paragraph)
     $ui.logBox.ScrollToEnd()
+    if ($script:consoleCollapsed) {
+        # Plegada, la consola muestra el último mensaje en su barra; un error la
+        # despliega para que no pase desapercibido.
+        if ($Entry.Type -eq 'ERROR') {
+            Set-ConsoleCollapsed $false
+        } else {
+            $ui.statusText.Text = $Entry.Message
+            $ui.statusText.Foreground = $logBrushes[$Entry.Type]
+        }
+    }
+}
+
+$script:consoleCollapsed = $false
+$script:consoleHeight = 170
+
+function Set-ConsoleCollapsed {
+    param([bool]$Collapsed)
+    if ($Collapsed -eq $script:consoleCollapsed) { return }
+    $script:consoleCollapsed = $Collapsed
+    if ($Collapsed) {
+        $script:consoleHeight = $ui.consoleRow.ActualHeight
+        $ui.consoleRow.MinHeight = 0
+        $ui.consoleRow.Height = [Windows.GridLength]::Auto
+        $ui.logBox.Visibility = 'Collapsed'
+        $ui.consoleSplitter.Visibility = 'Collapsed'
+        $ui.btnToggleLog.Content = 'Mostrar'
+    } else {
+        $ui.logBox.Visibility = 'Visible'
+        $ui.consoleSplitter.Visibility = 'Visible'
+        $ui.consoleRow.Height = New-Object Windows.GridLength ([Math]::Max(90, $script:consoleHeight))
+        $ui.consoleRow.MinHeight = 90
+        $ui.btnToggleLog.Content = 'Ocultar'
+        $ui.statusText.Foreground = $logBrushes.INFO
+        $ui.statusText.Text = if ($script:task) { "$($script:task.Title)…" } else { 'Listo' }
+        $ui.logBox.ScrollToEnd()
+    }
 }
 
 function Receive-Data {
@@ -790,7 +835,10 @@ function Set-Busy {
     param([bool]$Busy, [string]$Title = '')
     foreach ($b in $actionButtons) { $b.IsEnabled = -not $Busy }
     $ui.busyBar.Visibility = if ($Busy) { 'Visible' } else { 'Hidden' }
-    $ui.statusText.Text = if ($Busy) { "$Title…" } else { 'Listo' }
+    # Con la consola plegada la barra ya muestra el último mensaje de la tarea.
+    if (-not $script:consoleCollapsed) {
+        $ui.statusText.Text = if ($Busy) { "$Title…" } else { 'Listo' }
+    }
 }
 
 $script:task = $null
@@ -883,6 +931,16 @@ $ui.btnCopyLog.Add_Click({
         }
     })
 $ui.btnClearLog.Add_Click({ $ui.logBox.Document.Blocks.Clear() })
+$ui.btnToggleLog.Add_Click({ Set-ConsoleCollapsed (-not $script:consoleCollapsed) })
+
+$window.Add_SizeChanged({
+        # Tres columnas de tarjetas desde 880 DIPs de ancho; por debajo, dos.
+        $columns = if ($window.ActualWidth -lt 880) { 2 } else { 3 }
+        if ($ui.servicesGrid.Columns -ne $columns) {
+            $ui.servicesGrid.Columns = $columns
+            $ui.hwGrid.Columns = $columns
+        }
+    })
 
 $window.Add_SourceInitialized({
         # Barra de título oscura (DWMWA_USE_IMMERSIVE_DARK_MODE = 20, Windows 10 20H1+).

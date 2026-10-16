@@ -4,6 +4,22 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 
 ---
 
+## [Unreleased]
+
+### Añadido (Added)
+- **`PanelUtilidades/`**: panel nativo de Windows (PowerShell + WPF) compilado a `PanelUtilidades.exe`. Trae las 10 acciones del panel web: reinicio de Explorador, red, cola de impresión, audio y Windows Update; mantenimiento completo; hardware; búsqueda de actualizaciones con `winget`; respaldo y limpieza de perfil.
+
+### Cambiado (Changed)
+- Red: se reinician los adaptadores físicos conectados, no una interfaz llamada literalmente "Wi-Fi".
+- Mantenimiento completo: un paso que falla ya no corta la secuencia.
+- Limpieza de perfil: pide confirmación, usa `/XJ` (no sigue las junctions heredadas de Documentos) y excluye `desktop.ini` también en Descargas.
+- "Actualizar todo" abre `ActualizarApps.exe` (con log y timeouts) en vez de un `winget upgrade --all` sin control.
+
+### Eliminado (Removed)
+- Panel web (`web/`), su lanzador `Abrir-Utilidad-Web.bat` y `Limpiar-Perfil.bat`.
+
+---
+
 ## [1.1.1] - 2026-10-10
 
 ### Corregido (Fixed)

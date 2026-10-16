@@ -43,6 +43,9 @@ makeScriptsUtilities/
 │   ├── ActualizarApps.exe       # Binario compilado con auto-elevación UAC
 │   ├── updateScripts.ps1        # Script fuente en PowerShell
 │   └── logs/                    # Historial de actualizaciones ejecutadas
+├── PanelUtilidades/             # Panel gráfico nativo (WPF) de mantenimiento
+│   ├── PanelUtilidades.exe      # Binario compilado con auto-elevación UAC
+│   └── PanelUtilidades.ps1      # Script fuente en PowerShell + XAML
 ├── InfoEquipo/                  # Módulo de diagnóstico y auditoría de hardware
 │   ├── InfoEquipo.bat           # Lanzador rápido de un clic (Bypass Policy)
 │   ├── InfoEquipo.ps1           # Script PowerShell WMI / CIM
@@ -79,7 +82,20 @@ Automatiza la detección y actualización de todas las aplicaciones instaladas m
 
 ---
 
-### 2. InfoEquipo
+### 2. PanelUtilidades
+
+Ventana nativa de Windows (PowerShell + WPF) con cuatro pestañas y una consola de log en vivo. Reemplaza al antiguo panel web (`web/` + Node), que se eliminó.
+
+- **Servicios:** reinicia el Explorador, los adaptadores de red (más `flushdns` y `ipconfig /renew`), la cola de impresión, los servicios de audio y Windows Update. "Mantenimiento completo" corre todo en secuencia y sigue aunque falle un paso.
+- **Hardware:** CPU, GPU, RAM, disco del sistema, SO y tiempo encendido.
+- **Actualizaciones:** lista lo que `winget` puede actualizar; "Actualizar todo" abre `ActualizarApps.exe` en su propia ventana.
+- **Limpieza de perfil:** mueve Escritorio, Descargas y Documentos a `Escritorio\Respaldo_Usuario` con `robocopy` y restablece el fondo de pantalla. Pide confirmación antes de empezar.
+
+Las tareas corren en un runspace aparte, así que la ventana no se congela mientras trabajan.
+
+---
+
+### 3. InfoEquipo
 
 Herramienta de diagnóstico rápido que genera un reporte exhaustivo del hardware y software de la máquina utilizando consultas **CIM / WMI** optimizadas.
 
@@ -126,6 +142,14 @@ cd makeScriptsUtilities
   powershell -ExecutionPolicy Bypass -File "D:\Script\ActualizarApps\updateScripts.ps1"
   ```
 
+### Ejecutar PanelUtilidades
+
+- **Vía ejecutable (Recomendado):** doble clic en `PanelUtilidades\PanelUtilidades.exe`. Pide elevación UAC y abre la ventana.
+- **Vía PowerShell:** si no se abre como administrador, el script se relanza elevado por su cuenta.
+  ```powershell
+  powershell -ExecutionPolicy Bypass -STA -File ".\PanelUtilidades\PanelUtilidades.ps1"
+  ```
+
 ### Ejecutar InfoEquipo
 
 - **Vía lanzador rápido:**  
@@ -160,6 +184,8 @@ Invoke-ps2exe -inputFile "D:\Script\ActualizarApps\updateScripts.ps1" `
 
 > [!IMPORTANT]
 > El flag `-requireAdmin` es obligatorio. Sin este parámetro en el manifiesto, `winget` fallará al procesar paquetes que requieran permisos de Administrador.
+
+`PanelUtilidades.exe` se compila igual, a partir de `PanelUtilidades\PanelUtilidades.ps1`, agregando `-noConsole -STA -DPIAware` (es una ventana WPF, no una consola). El comando completo está en `CLAUDE.md`.
 
 ---
 

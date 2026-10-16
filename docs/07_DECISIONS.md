@@ -29,6 +29,20 @@
 
 ---
 
+## ADR 005: Panel nativo WPF en lugar del panel web
+- **Fecha:** 2026-10-15
+- **Estado:** Aceptado (reemplaza al panel `web/`)
+- **Contexto:** El panel web necesitaba Node.js (o un servidor HTTP en PowerShell de respaldo), un puerto local (5050) y un navegador abierto. Se pidió una versión nativa de Windows y eliminar la web.
+- **Alternativas evaluadas:**
+  - *C# WPF/WinForms con .NET:* exige el SDK para compilar y un proyecto aparte; rompe con el resto de la suite.
+  - *PowerShell + WPF compilado con `ps2exe`:* mismo stack y misma forma de distribución que `ActualizarApps.exe`; no requiere instalar nada.
+- **Decisión:** PowerShell + WPF (`PanelUtilidades/PanelUtilidades.ps1`), compilado con `ps2exe -noConsole -STA -requireAdmin`. Las tareas corren en un runspace aparte y se comunican con la UI mediante una `ConcurrentQueue` que vacía un `DispatcherTimer`.
+- **Consecuencias:**
+  - *Positivas:* un solo `.exe`, sin Node, sin puerto abierto ni navegador. Los comandos externos corren sin ventana (`CreateNoWindow`).
+  - *Negativas:* con `-noConsole`, cualquier salida al pipeline del script se muestra como MessageBox, así que hay que suprimirla con `[void]`. Tras cada cambio del `.ps1` hay que recompilar el `.exe`.
+
+---
+
 ## ADR 004: Uso de Robocopy en `Limpiar-Perfil.bat`
 - **Fecha:** 2026-10-06
 - **Estado:** Aceptado

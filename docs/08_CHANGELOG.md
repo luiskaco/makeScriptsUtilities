@@ -1,4 +1,4 @@
-# 08. Historial de Cambios (CHANGELOG)
+﻿# 08. Historial de Cambios (CHANGELOG)
 
 Todas las modificaciones notables de la suite **MakeScriptsUtilities** se documentan en este archivo siguiendo las convenciones de [Keep a Changelog](https://keepachangelog.com/).
 
@@ -7,6 +7,7 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 ## [Unreleased]
 
 ### Añadido (Added)
+- **`PanelUtilidades`**: la pestaña «Red» suma proveedores de DNS: Quad9 (bloquea sitios maliciosos), OpenDNS, AdGuard (bloquea anuncios y rastreadores) y CleanBrowsing (filtro familiar), además de Google, Cloudflare y automático. Los servidores se verificaron resolviendo desde esta red. La lista sale de una sola tabla (`dnsProviders`): para sumar otro basta agregar una fila. `PanelUtilidades.exe` recompilado.
 - **`PanelUtilidades`**: pestaña «Red» con diagnóstico (IP, puerta de enlace, DNS y MAC; ping al router, al DNS y a internet; resolución de nombres) que concluye dónde falla, y selector de DNS (automático, Google o Cloudflare) aplicado a los adaptadores físicos conectados.
 - **`PanelUtilidades`**: gestor de impresoras instaladas en la pestaña «Impresoras» (predeterminada, página de prueba, quitar, con confirmación) y «Limpiar cola a fondo», que detiene el Spooler, borra los trabajos atascados y lo reinicia siempre, incluso si algo falla.
 - **`PanelUtilidades`**: botón «Copiar informe para soporte» en Hardware (equipo, usuario, modelo, serie, SO, RAM, disco y red) al portapapeles.
@@ -16,6 +17,7 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 - **`PanelUtilidades/`**: panel nativo de Windows (PowerShell + WPF) compilado a `PanelUtilidades.exe`. Trae las 10 acciones del panel web: reinicio de Explorador, red, cola de impresión, audio y Windows Update; mantenimiento completo; hardware; búsqueda de actualizaciones con `winget`; respaldo y limpieza de perfil.
 
 ### Cambiado (Changed)
+- **`PanelUtilidades`**: mejor descubrimiento de las funciones. «Red» se divide en las sub-pestañas «Diagnóstico» y «Servidores DNS», e «Impresoras» en «Instalar impresora» e «Impresoras instaladas», para que cada vista quepa sin scroll (antes el gestor de impresoras y el DNS quedaban ocultos bajo el pliegue). El formulario de instalación pasa a dos columnas con el resultado junto al botón, las tablas ocupan el espacio disponible y la consola arranca más baja (120 px) para que Servicios muestre sus 6 tarjetas completas. `PanelUtilidades.exe` recompilado.
 - **`PanelUtilidades`**: paleta pastel en lugar del naranja de marca. Acento lavanda `#A5B4FC` (botones, pestaña activa, selección, ícono y progreso), aviso ámbar suave, OK menta y error rosa; los botones pastel llevan texto oscuro. El tema oscuro no cambia. `PanelUtilidades.exe` recompilado.
 - **`PanelUtilidades`**: pestaña Actualizaciones con casillas (marcadas de entrada) y columna de estado; «Actualizar seleccionadas» instala dentro del panel de a una app, con límite de 5 min cada una y sin cortar la serie si una falla. Al vencer el plazo se mata el árbol completo de procesos de `winget`, no solo a `winget`. Si ya hay otro `winget` corriendo, no empieza. `PanelUtilidades.exe` recompilado.
 - Red: se reinician los adaptadores físicos conectados, no una interfaz llamada literalmente "Wi-Fi".

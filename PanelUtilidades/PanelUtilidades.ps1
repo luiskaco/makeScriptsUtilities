@@ -539,17 +539,17 @@ function Get-NetworkDiagnosis {
 }
 
 function Set-DnsPreset {
-    param([ValidateSet('Auto', 'Google', 'Cloudflare')][string]$Preset)
-    $servers = @{ Google = @('8.8.8.8', '8.8.4.4'); Cloudflare = @('1.1.1.1', '1.0.0.1') }
+    # Sin $Servers vuelve a automático (DHCP). La lista de proveedores vive en la UI ($dnsProviders).
+    param([string]$Name, [string[]]$Servers)
     $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object Status -eq 'Up')
     if ($adapters.Count -eq 0) { throw 'No hay adaptadores de red físicos conectados.' }
     foreach ($a in $adapters) {
-        if ($Preset -eq 'Auto') {
+        if (-not $Servers -or $Servers.Count -eq 0) {
             Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ResetServerAddresses -ErrorAction Stop
             Write-Log "'$($a.Name)': DNS automático (DHCP)." 'OK'
         } else {
-            Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ServerAddresses $servers[$Preset] -ErrorAction Stop
-            Write-Log "'$($a.Name)': DNS $Preset ($($servers[$Preset] -join ', '))." 'OK'
+            Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ServerAddresses $Servers -ErrorAction Stop
+            Write-Log "'$($a.Name)': DNS $Name ($($Servers -join ', '))." 'OK'
         }
     }
     Clear-DnsClientCache -ErrorAction Stop
@@ -847,6 +847,23 @@ $infoCards = @(
     New-InfoCardXaml 'Pc' 'EQUIPO'
 ) -join "`n"
 
+# Proveedores de DNS de la pestaña Red. Una sola lista genera los botones, se lee al aplicar
+# y se pasa al worker; para sumar uno basta agregar una fila (sin Servers = automático/DHCP).
+$dnsProviders = @(
+    @{ Key = 'Auto'; Label = 'Automático (los entrega el router por DHCP)'; Servers = @() }
+    @{ Key = 'Google'; Label = 'Google'; Servers = @('8.8.8.8', '8.8.4.4') }
+    @{ Key = 'Cloudflare'; Label = 'Cloudflare'; Servers = @('1.1.1.1', '1.0.0.1') }
+    @{ Key = 'Quad9'; Label = 'Quad9 (bloquea sitios maliciosos)'; Servers = @('9.9.9.9', '149.112.112.112') }
+    @{ Key = 'OpenDNS'; Label = 'OpenDNS (Cisco)'; Servers = @('208.67.222.222', '208.67.220.220') }
+    @{ Key = 'AdGuard'; Label = 'AdGuard (bloquea anuncios y rastreadores)'; Servers = @('94.140.14.14', '94.140.15.15') }
+    @{ Key = 'CleanBrowsing'; Label = 'CleanBrowsing (filtro familiar)'; Servers = @('185.228.168.168', '185.228.169.168') }
+)
+$dnsRadios = ($dnsProviders | ForEach-Object {
+        $text = if ($_.Servers.Count) { "$($_.Label)  ·  $($_.Servers -join '  y  ')" } else { $_.Label }
+        $checked = if ($_.Key -eq 'Auto') { ' IsChecked="True"' } else { '' }
+        "<RadioButton x:Name=`"dns$($_.Key)`" Content=`"$(ConvertTo-XmlText $text)`" GroupName=`"dns`"$checked/>"
+    }) -join "`n"
+
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -1066,6 +1083,44 @@ $xaml = @"
       </Style.Triggers>
     </Style>
 
+    <Style x:Key="SubTabs" TargetType="TabControl">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabControl">
+            <DockPanel>
+              <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Margin="0,0,0,14"/>
+              <ContentPresenter ContentSource="SelectedContent"/>
+            </DockPanel>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SubTab" TargetType="TabItem">
+      <Setter Property="Foreground" Value="#8C92AC"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TabItem">
+            <Border x:Name="pill" CornerRadius="16" Padding="16,6" Margin="0,0,8,0" Cursor="Hand"
+                    Background="#171824" BorderBrush="#22253A" BorderThickness="1">
+              <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+                <Setter TargetName="pill" Property="Background" Value="#1E2030"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Foreground" Value="#C7D2FE"/>
+                <Setter TargetName="pill" Property="Background" Value="#33A5B4FC"/>
+                <Setter TargetName="pill" Property="BorderBrush" Value="#A5B4FC"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style TargetType="TabControl">
       <Setter Property="Template">
         <Setter.Value>
@@ -1108,7 +1163,7 @@ $xaml = @"
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="*" MinHeight="300"/>
       <RowDefinition Height="5"/>
-      <RowDefinition x:Name="consoleRow" Height="170" MinHeight="90"/>
+      <RowDefinition x:Name="consoleRow" Height="120" MinHeight="90"/>
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="24,12,24,8">
@@ -1229,96 +1284,109 @@ $infoCards
       </TabItem>
 
       <TabItem Header="Red">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <StackPanel>
-            <DockPanel Margin="0,0,12,14">
-              <Button x:Name="btnNetDiag" DockPanel.Dock="Right" Content="Diagnosticar red" Style="{StaticResource AccentButton}" VerticalAlignment="Center"/>
-              <StackPanel>
-                <TextBlock Text="Diagnóstico de red" Style="{StaticResource SectionTitle}"/>
-                <TextBlock Text="Muestra IP, DNS y MAC de los adaptadores conectados y prueba, en orden, el router, internet y la resolución de nombres para ubicar dónde falla." Style="{StaticResource SectionText}"/>
-              </StackPanel>
+        <TabControl Style="{StaticResource SubTabs}">
+          <TabItem Header="Diagnóstico" Style="{StaticResource SubTab}">
+            <DockPanel Margin="0,0,12,12">
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <Button x:Name="btnNetDiag" DockPanel.Dock="Right" Content="Diagnosticar red" Style="{StaticResource AccentButton}" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                <TextBlock Text="IP, DNS y MAC de los adaptadores conectados, más pruebas del router, de internet y de la resolución de nombres para ubicar dónde falla." Style="{StaticResource SectionText}" VerticalAlignment="Center"/>
+              </DockPanel>
+              <TextBlock x:Name="netSummary" DockPanel.Dock="Top" Margin="0,0,0,10" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#7E849E"
+                         Text="Pulsa «Diagnosticar red» para empezar."/>
+              <DataGrid x:Name="netGrid" Style="{StaticResource DataTable}" IsReadOnly="True">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Prueba" Binding="{Binding Test}" Width="2*"/>
+                  <DataGridTextColumn Header="Resultado" Binding="{Binding Result}" Width="3*"/>
+                  <DataGridTextColumn Header="Estado" Binding="{Binding State}" Width="*"/>
+                </DataGrid.Columns>
+              </DataGrid>
             </DockPanel>
-            <TextBlock x:Name="netSummary" Margin="0,0,12,10" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#7E849E"
-                       Text="Pulsa «Diagnosticar red» para empezar."/>
-            <DataGrid x:Name="netGrid" Style="{StaticResource DataTable}" IsReadOnly="True" Height="300" Margin="0,0,12,0">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Prueba" Binding="{Binding Test}" Width="2*"/>
-                <DataGridTextColumn Header="Resultado" Binding="{Binding Result}" Width="3*"/>
-                <DataGridTextColumn Header="Estado" Binding="{Binding State}" Width="*"/>
-              </DataGrid.Columns>
-            </DataGrid>
-            <Border Style="{StaticResource Card}" Margin="0,16,12,12">
-              <StackPanel>
-                <TextBlock Text="SERVIDORES DNS" Style="{StaticResource Eyebrow}"/>
-                <TextBlock Style="{StaticResource CardText}" Margin="0,0,0,12"
-                           Text="Se aplican a los adaptadores físicos conectados y vacían la caché DNS. Requiere administrador. Útil cuando hay internet pero algunas páginas no cargan."/>
-                <RadioButton x:Name="dnsAuto" Content="Automático (los entrega el router por DHCP)" IsChecked="True" GroupName="dns"/>
-                <RadioButton x:Name="dnsGoogle" Content="Google  ·  8.8.8.8 y 8.8.4.4" GroupName="dns"/>
-                <RadioButton x:Name="dnsCloudflare" Content="Cloudflare  ·  1.1.1.1 y 1.0.0.1" GroupName="dns"/>
-                <Button x:Name="btnDnsApply" Content="Aplicar DNS" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </ScrollViewer>
+          </TabItem>
+          <TabItem Header="Servidores DNS" Style="{StaticResource SubTab}">
+            <StackPanel>
+              <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="SERVIDORES DNS" Style="{StaticResource Eyebrow}"/>
+                  <TextBlock Style="{StaticResource CardText}" Margin="0,0,0,12"
+                             Text="Se aplican a los adaptadores físicos conectados y vacían la caché DNS. Requiere administrador. Útil cuando hay internet pero algunas páginas no cargan."/>
+                  <UniformGrid Columns="2">
+$dnsRadios
+                  </UniformGrid>
+                  <Button x:Name="btnDnsApply" Content="Aplicar DNS" Style="{StaticResource AccentButton}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </TabItem>
+        </TabControl>
       </TabItem>
 
       <TabItem Header="Impresoras">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <StackPanel MaxWidth="680" HorizontalAlignment="Left">
-            <StackPanel Margin="0,0,12,14">
-              <TextBlock Text="Impresora de red (TCP/IP)" Style="{StaticResource SectionTitle}"/>
-              <TextBlock Text="Crea el puerto TCP/IP estándar (RAW, 9100) y registra la impresora con un controlador ya instalado en Windows. Instala antes el controlador del fabricante (Epson, HP, etc.)." Style="{StaticResource SectionText}"/>
-            </StackPanel>
-            <Border Style="{StaticResource Card}" Margin="0,0,12,12">
-              <StackPanel>
-                <TextBlock Text="NOMBRE DE LA IMPRESORA" Style="{StaticResource Eyebrow}"/>
-                <TextBox x:Name="prnName" Text="Impresora Oficina - Orange" Margin="0,0,0,14"/>
-                <TextBlock Text="IP O NOMBRE DE HOST" Style="{StaticResource Eyebrow}"/>
-                <DockPanel Margin="0,0,0,14">
-                  <Button x:Name="btnPrnTest" DockPanel.Dock="Right" Content="Probar puerto 9100" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
-                  <TextBox x:Name="prnIp" Text="192.168.8.1" FontFamily="Consolas"/>
-                </DockPanel>
-                <DockPanel Margin="0,0,0,6">
-                  <Button x:Name="btnPrnReload" DockPanel.Dock="Right" Content="Recargar lista" Style="{StaticResource GhostButton}"/>
-                  <TextBlock Text="CONTROLADOR" Style="{StaticResource Eyebrow}" VerticalAlignment="Center"/>
-                </DockPanel>
-                <ListBox x:Name="prnDrivers" Style="{StaticResource PickList}" Height="170" Margin="0,0,0,14"/>
-                <CheckBox x:Name="prnDefault" Content="Establecer como impresora predeterminada" IsChecked="True"/>
-                <CheckBox x:Name="prnTestPage" Content="Imprimir una página de prueba al terminar" IsChecked="True"/>
-                <TextBlock x:Name="prnResult" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#7E849E"
+        <TabControl Style="{StaticResource SubTabs}">
+          <TabItem Header="Instalar impresora" Style="{StaticResource SubTab}">
+            <DockPanel Margin="0,0,12,12">
+              <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10" Style="{StaticResource SectionText}"
+                         Text="Crea el puerto TCP/IP estándar (RAW, 9100) y registra la impresora con un controlador ya instalado en Windows. Instala antes el del fabricante (Epson, HP, etc.)."/>
+              <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                <Button x:Name="btnPrnInstall" DockPanel.Dock="Left" Content="Instalar impresora" Style="{StaticResource AccentButton}"/>
+                <TextBlock x:Name="prnResult" TextWrapping="Wrap" Margin="16,0,0,0" VerticalAlignment="Center" Foreground="#7E849E"
                            Text="Elige un controlador, revisa la IP y pulsa «Instalar impresora»."/>
-              </StackPanel>
-            </Border>
-            <Button x:Name="btnPrnInstall" Content="Instalar impresora" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"/>
-            <Border Style="{StaticResource Card}" Margin="0,20,12,12">
-              <StackPanel>
-                <DockPanel Margin="0,0,0,10">
-                  <Button x:Name="btnPrnRefresh" DockPanel.Dock="Right" Content="Actualizar lista" Style="{StaticResource GhostButton}"/>
-                  <TextBlock Text="IMPRESORAS INSTALADAS" Style="{StaticResource Eyebrow}" Margin="0" VerticalAlignment="Center"/>
-                </DockPanel>
-                <DataGrid x:Name="prnList" Style="{StaticResource DataTable}" IsReadOnly="True" Height="190">
-                  <DataGrid.Columns>
-                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*"/>
-                    <DataGridTextColumn Header="Controlador" Binding="{Binding Driver}" Width="1.8*"/>
-                    <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="1.3*"/>
-                    <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="118"/>
-                    <DataGridTextColumn Header="Pred." Binding="{Binding IsDefault}" Width="64"/>
-                  </DataGrid.Columns>
-                </DataGrid>
-                <WrapPanel Margin="0,12,0,0">
-                  <Button x:Name="btnPrnDefault" Content="Predeterminada" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
-                  <Button x:Name="btnPrnTestPage" Content="Página de prueba" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
-                  <Button x:Name="btnPrnRemove" Content="Quitar" Style="{StaticResource DangerButton}" Margin="0,0,8,6"/>
-                  <Button x:Name="btnPrnClearQueue" Content="Limpiar cola a fondo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
-                </WrapPanel>
-                <TextBlock Style="{StaticResource CardText}" Margin="0,4,0,0"
-                           Text="«Limpiar cola a fondo» detiene el Spooler, borra los trabajos atascados y lo vuelve a iniciar (administrador). Los trabajos pendientes se pierden."/>
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </ScrollViewer>
+              </DockPanel>
+              <Border Style="{StaticResource Card}" Margin="0">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="24"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="NOMBRE DE LA IMPRESORA" Style="{StaticResource Eyebrow}"/>
+                    <TextBox x:Name="prnName" Text="Impresora Oficina - Orange" Margin="0,0,0,14"/>
+                    <TextBlock Text="IP O NOMBRE DE HOST" Style="{StaticResource Eyebrow}"/>
+                    <DockPanel Margin="0,0,0,14">
+                      <Button x:Name="btnPrnTest" DockPanel.Dock="Right" Content="Probar 9100" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
+                      <TextBox x:Name="prnIp" Text="192.168.8.1" FontFamily="Consolas"/>
+                    </DockPanel>
+                    <CheckBox x:Name="prnDefault" Content="Establecer como impresora predeterminada" IsChecked="True"/>
+                    <CheckBox x:Name="prnTestPage" Content="Imprimir una página de prueba al terminar" IsChecked="True"/>
+                  </StackPanel>
+                  <DockPanel Grid.Column="2">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                      <Button x:Name="btnPrnReload" DockPanel.Dock="Right" Content="Recargar lista" Style="{StaticResource GhostButton}"/>
+                      <TextBlock Text="CONTROLADOR" Style="{StaticResource Eyebrow}" Margin="0" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ListBox x:Name="prnDrivers" Style="{StaticResource PickList}" MinHeight="150"/>
+                  </DockPanel>
+                </Grid>
+              </Border>
+            </DockPanel>
+          </TabItem>
+          <TabItem Header="Impresoras instaladas" Style="{StaticResource SubTab}">
+            <DockPanel Margin="0,0,12,12">
+              <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource CardText}" Margin="0,2,0,0"
+                         Text="«Limpiar cola a fondo» detiene el Spooler, borra los trabajos atascados y lo vuelve a iniciar (administrador). Los trabajos pendientes se pierden."/>
+              <WrapPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                <Button x:Name="btnPrnDefault" Content="Predeterminada" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+                <Button x:Name="btnPrnTestPage" Content="Página de prueba" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+                <Button x:Name="btnPrnRemove" Content="Quitar" Style="{StaticResource DangerButton}" Margin="0,0,8,6"/>
+                <Button x:Name="btnPrnClearQueue" Content="Limpiar cola a fondo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+              </WrapPanel>
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <Button x:Name="btnPrnRefresh" DockPanel.Dock="Right" Content="Actualizar lista" Style="{StaticResource GhostButton}" Margin="16,0,0,0"/>
+                <TextBlock Text="Selecciona una impresora y usa los botones de abajo." Style="{StaticResource SectionText}" VerticalAlignment="Center"/>
+              </DockPanel>
+              <DataGrid x:Name="prnList" Style="{StaticResource DataTable}" IsReadOnly="True">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*"/>
+                  <DataGridTextColumn Header="Controlador" Binding="{Binding Driver}" Width="1.8*"/>
+                  <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="1.3*"/>
+                  <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="118"/>
+                  <DataGridTextColumn Header="Pred." Binding="{Binding IsDefault}" Width="64"/>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+          </TabItem>
+        </TabControl>
       </TabItem>
-
       <TabItem Header="Limpieza de perfil">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel MaxWidth="760" HorizontalAlignment="Left">
@@ -1384,9 +1452,10 @@ foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText',
         'btnWinScan', 'btnWinInstall', 'winSummary', 'winReboot', 'winGrid',
         'prnName', 'prnIp', 'prnDrivers', 'prnDefault', 'prnTestPage', 'prnResult', 'btnPrnTest', 'btnPrnReload', 'btnPrnInstall',
         'prnList', 'btnPrnRefresh', 'btnPrnDefault', 'btnPrnTestPage', 'btnPrnRemove', 'btnPrnClearQueue',
-        'btnNetDiag', 'netGrid', 'netSummary', 'dnsAuto', 'dnsGoogle', 'dnsCloudflare', 'btnDnsApply', 'btnCopyReport')) {
+        'btnNetDiag', 'netGrid', 'netSummary', 'btnDnsApply', 'btnCopyReport')) {
     $ui[$name] = $window.FindName($name)
 }
+foreach ($p in $dnsProviders) { $ui["dns$($p.Key)"] = $window.FindName("dns$($p.Key)") }
 $hwKeys = @('Cpu', 'Gpu', 'Ram', 'Disk', 'Os', 'Pc')
 foreach ($k in $hwKeys) {
     $ui["hw${k}Main"] = $window.FindName("hw${k}Main")
@@ -1645,8 +1714,9 @@ $ui.btnNetDiag.Add_Click({ Start-Task 'Diagnosticar red' 'Get-NetworkDiagnosis' 
 $ui.btnCopyReport.Add_Click({ Start-Task 'Armar informe para soporte' 'Get-SupportReport' })
 
 $ui.btnDnsApply.Add_Click({
-        $preset = if ($ui.dnsGoogle.IsChecked) { 'Google' } elseif ($ui.dnsCloudflare.IsChecked) { 'Cloudflare' } else { 'Auto' }
-        Start-Task "Aplicar DNS ($preset)" 'Set-DnsPreset' @{ Preset = $preset }
+        $provider = $dnsProviders | Where-Object { $ui["dns$($_.Key)"].IsChecked } | Select-Object -First 1
+        if (-not $provider) { $provider = $dnsProviders[0] }
+        Start-Task "Aplicar DNS ($($provider.Key))" 'Set-DnsPreset' @{ Name = $provider.Key; Servers = [string[]]$provider.Servers }
     })
 
 function Get-SelectedPrinterName {

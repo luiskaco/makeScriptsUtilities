@@ -17,10 +17,39 @@ function Write-Banner {
 }
 
 function Write-Section {
+    # La hora en cada paso deja en el log hasta dónde llegó una ejecución cortada.
     param([string]$Title, [string]$Icon = "▸")
     Write-Host ""
-    Write-Host "$Icon $Title" -ForegroundColor Yellow
+    Write-Host "$Icon $Title  [$(Get-Date -Format 'HH:mm:ss')]" -ForegroundColor Yellow
     Write-Host ("─" * $width) -ForegroundColor DarkGray
+}
+
+function Invoke-Winget {
+    # Corre winget con límite de tiempo. Sin -Capture hereda la consola (se ve el
+    # progreso); con -Capture devuelve la salida en Output, drenada en segundo plano
+    # para que el buffer del pipe no cuelgue al proceso. Al vencer el plazo mata el
+    # árbol completo (taskkill /T): winget lanza procesos hijos que sobrevivirían a Kill().
+    param([string]$Arguments, [int]$TimeoutSeconds = 120, [switch]$Capture)
+
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "winget"
+    $psi.Arguments = $Arguments
+    $psi.UseShellExecute = $false
+    if ($Capture) {
+        $psi.RedirectStandardOutput = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+    }
+
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $readTask = if ($Capture) { $proc.StandardOutput.ReadToEndAsync() } else { $null }
+    $finished = $proc.WaitForExit($TimeoutSeconds * 1000)
+
+    if (-not $finished) {
+        & taskkill.exe /PID $proc.Id /T /F 2>&1 | Out-Null
+        return [PSCustomObject]@{ Output = ""; Code = -1; TimedOut = $true }
+    }
+    $output = if ($readTask) { $readTask.Result } else { "" }
+    return [PSCustomObject]@{ Output = $output; Code = $proc.ExitCode; TimedOut = $false }
 }
 
 function Write-Summary {
@@ -38,8 +67,9 @@ function Write-Summary {
 
 function Get-PendingUpgrades {
     # Parsea la salida en tabla de "winget upgrade" en objetos Name/Id/Version/Available/Source
-    $raw = winget upgrade --include-unknown | Out-String
-    $lines = $raw -split "`r?`n"
+    $query = Invoke-Winget -Arguments "upgrade --include-unknown --accept-source-agreements" -TimeoutSeconds 180 -Capture
+    if ($query.TimedOut) { throw "winget no respondió al listar actualizaciones tras 3 min." }
+    $lines = $query.Output -split "`r?`n"
 
     $headerIndex = -1
     for ($i = 0; $i -lt $lines.Count; $i++) {
@@ -125,9 +155,13 @@ function Get-BrowserCandidateIds {
         'Opera'               = 'Opera.Opera'
     }
 
-    $raw = winget list | Out-String
+    $query = Invoke-Winget -Arguments "list --accept-source-agreements" -TimeoutSeconds 180 -Capture
+    if ($query.TimedOut) {
+        Write-Host "  ⏱ winget no respondió al listar paquetes instalados tras 3 min — se omite este paso." -ForegroundColor Yellow
+        return ,@()
+    }
     $candidates = @()
-    foreach ($line in ($raw -split "`r?`n")) {
+    foreach ($line in ($query.Output -split "`r?`n")) {
         if ($line -notmatch '(ARP|MSIX)\\') { continue }
         foreach ($vendor in $vendorMap.Keys) {
             # Exige que tras el nombre del vendor venga un dígito o un paréntesis
@@ -268,7 +302,10 @@ try {
     }
 
     Write-Section -Title "Actualizando repositorio de fuentes" -Icon "①"
-    winget source update
+    $sourceUpdate = Invoke-Winget -Arguments "source update" -TimeoutSeconds 120
+    if ($sourceUpdate.TimedOut) {
+        Write-Host "  ⏱ winget source update sin respuesta tras 2 min — se continúa con el índice local." -ForegroundColor Yellow
+    }
 
     Write-Section -Title "Revisando aplicaciones con actualización pendiente" -Icon "②"
     $apps = Get-PendingUpgrades

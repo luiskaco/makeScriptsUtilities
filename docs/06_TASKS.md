@@ -47,7 +47,8 @@
   - [ ] Crear versión con interfaz gráfica WPF para visualizar tarjetas con gráficos de uso de recursos en tiempo real.
 - [ ] **Módulo `ActualizarApps/`:**
   - [ ] Interfaz gráfica con checkboxes para deseleccionar aplicaciones específicas antes de la actualización masiva. (Se cubre con la tarea "Actualizar solo las seleccionadas" de `PanelUtilidades/`.)
-  - [ ] Investigar por qué los logs del 2026-10-14 y 2026-10-15 quedaron cortados en los pasos ③ y ① sin el cierre del transcript (ventana cerrada a mano o `winget` colgado; `winget source update` no tiene timeout).
+  - [x] Endurecimiento: timeouts en `winget source update`, `upgrade` y `list`, y hora por paso en el log (2026-10-16).
+  - [ ] Causa de los logs del 2026-10-14 y 2026-10-15 cortados en los pasos ③ y ① sin el cierre del transcript: sin determinar, esos logs no están en este equipo. Si vuelve a pasar, la hora por paso del log indicará dónde se detuvo. Hipótesis: ventana cerrada a mano en ③; `winget source update` colgado en ①.
 - [ ] **Módulo `PanelUtilidades/` — sacar más partido a lo existente:**
   - [ ] Pestaña Actualizaciones: casillas en la tabla y botón "Actualizar seleccionadas" que instale dentro del panel, con límite de tiempo por app como `ActualizarApps`.
   - [ ] Pestaña Hardware: mostrar si hay driver NVIDIA más nuevo, reutilizando la consulta de `ActualizarApps`.

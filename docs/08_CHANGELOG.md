@@ -16,6 +16,8 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 - "Actualizar todo" abre `ActualizarApps.exe` (con log y timeouts) en vez de un `winget upgrade --all` sin control.
 - `PanelUtilidades`: el tamaño inicial se ajusta al área útil de la pantalla (antes 1080×800 fijo, más alto que una pantalla 1280×752 en DIPs). Consola plegable (un error la vuelve a desplegar), tarjetas más compactas con el ícono al lado del título y dos columnas por debajo de 880 de ancho.
 
+- **`ActualizarApps`**: `winget source update` (2 min), `winget upgrade` y `winget list` (3 min) ya tienen límite de tiempo; antes podían colgar la ejecución sin fin. Al vencer se mata el árbol de procesos de `winget` y el script sigue (la actualización de fuentes y el chequeo de navegadores se omiten con aviso; si falla el listado de pendientes, termina con error claro). Cada paso muestra su hora en el log, para ver hasta dónde llegó una ejecución cortada. `ActualizarApps.exe` recompilado.
+
 ### Eliminado (Removed)
 - Panel web (`web/`), su lanzador `Abrir-Utilidad-Web.bat` y `Limpiar-Perfil.bat`.
 

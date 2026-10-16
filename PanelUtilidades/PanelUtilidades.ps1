@@ -381,20 +381,210 @@ function Install-NetworkPrinter {
         }
         if ($TestPage) {
             try {
-                # WQL escapa la comilla simple y la barra invertida con una barra invertida.
-                $wql = $Name.Replace('\', '\\').Replace("'", "\'")
-                $cim = Get-CimInstance -ClassName Win32_Printer -Filter "Name = '$wql'" -ErrorAction Stop
-                $null = Invoke-CimMethod -InputObject $cim -MethodName PrintTestPage -ErrorAction Stop
-                Write-Log 'Página de prueba enviada a la cola de impresión.' 'OK'
+                Send-PrinterTestPage -Name $Name
             } catch {
                 Write-Log "No se pudo enviar la página de prueba: $($_.Exception.Message)" 'WARN'
             }
         }
+        try { Get-InstalledPrinters } catch { Write-Log "No se pudo actualizar la lista de impresoras: $($_.Exception.Message)" 'WARN' }
         Send-PrinterResult "✔ «$Name» quedó instalada en ${HostName}:$port." 'OK'
     } catch {
         Send-PrinterResult "✖ No se pudo instalar: $($_.Exception.Message)" 'ERROR'
         throw
     }
+}
+
+function Send-PrinterTestPage {
+    param([string]$Name)
+    # WQL escapa la comilla simple y la barra invertida con una barra invertida.
+    $wql = $Name.Replace('\', '\\').Replace("'", "\'")
+    $cim = Get-CimInstance -ClassName Win32_Printer -Filter "Name = '$wql'" -ErrorAction Stop
+    if (-not $cim) { throw "No se encontró la impresora «$Name»." }
+    $null = Invoke-CimMethod -InputObject $cim -MethodName PrintTestPage -ErrorAction Stop
+    Write-Log "Página de prueba enviada a «$Name»." 'OK'
+}
+
+function Get-InstalledPrinters {
+    # Win32_Printer, no Get-Printer: solo WMI informa WorkOffline (impresora USB apagada o desconectada).
+    $list = @(Get-CimInstance -ClassName Win32_Printer -ErrorAction Stop | Sort-Object Name | ForEach-Object {
+            [pscustomobject]@{
+                Name      = $_.Name
+                Driver    = $_.DriverName
+                Port      = $_.PortName
+                Status    = if ($_.WorkOffline) { 'Sin conexión' } else { 'Lista' }
+                IsDefault = if ($_.Default) { '✔' } else { '' }
+            }
+        })
+    Send-Data 'printerList' $list
+}
+
+function Update-PrinterData {
+    Get-PrinterDriverNames
+    Get-InstalledPrinters
+}
+
+function Set-DefaultPrinterByName {
+    param([string]$Name)
+    (New-Object -ComObject WScript.Network).SetDefaultPrinter($Name)
+    Write-Log "«$Name» es ahora la impresora predeterminada." 'OK'
+    Get-InstalledPrinters
+}
+
+function Remove-PrinterByName {
+    param([string]$Name)
+    Remove-Printer -Name $Name -ErrorAction Stop
+    Write-Log "Impresora «$Name» quitada. Su puerto TCP/IP se conserva." 'OK'
+    Get-InstalledPrinters
+}
+
+function Clear-PrintQueueDeep {
+    $spool = Join-Path $env:SystemRoot 'System32\spool\PRINTERS'
+    Write-Log 'Deteniendo la cola de impresión (Spooler)...'
+    Stop-Service -Name 'Spooler' -Force -ErrorAction Stop
+    try {
+        $removed = 0
+        foreach ($f in @(Get-ChildItem -LiteralPath $spool -File -Force -ErrorAction SilentlyContinue)) {
+            try {
+                Remove-Item -LiteralPath $f.FullName -Force -ErrorAction Stop
+                $removed++
+            } catch {
+                Write-Log "No se pudo borrar $($f.Name): $($_.Exception.Message)" 'WARN'
+            }
+        }
+        Write-Log "$removed archivo(s) atascado(s) eliminado(s) de la cola." 'OK'
+    } finally {
+        # Se reinicia siempre: dejar el Spooler detenido rompe la impresión de todo el equipo.
+        Start-Service -Name 'Spooler' -ErrorAction Stop
+        Write-Log 'Spooler iniciado.' 'OK'
+    }
+}
+
+function Test-HostPing {
+    # Devuelve los ms de ida y vuelta, o -1 si no responde. Ping de .NET: sin ventana de consola.
+    param([string]$Target, [int]$TimeoutMs = 2000)
+    $ping = New-Object System.Net.NetworkInformation.Ping
+    try {
+        $reply = $ping.Send($Target, $TimeoutMs)
+        if ($reply.Status -eq 'Success') { return [int]$reply.RoundtripTime }
+        return -1
+    } catch {
+        return -1
+    } finally {
+        $ping.Dispose()
+    }
+}
+
+function Resolve-HostName {
+    param([string]$Name = 'google.com')
+    try {
+        $task = [System.Net.Dns]::GetHostAddressesAsync($Name)
+        if ($task.Wait(4000)) { return (@($task.Result) | Select-Object -First 1).IPAddressToString }
+    } catch {}
+    return $null
+}
+
+function Get-NetworkDiagnosis {
+    Write-Log 'Diagnosticando la red...'
+    $rows = New-Object System.Collections.Generic.List[object]
+    $add = { param($Test, $Result, $State) $rows.Add([pscustomobject]@{ Test = $Test; Result = $Result; State = $State }) }
+    $ok = '✔ OK'; $bad = '✖ Falla'
+
+    $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object Status -eq 'Up')
+    $gateway = $null; $dnsServer = $null
+    foreach ($a in $adapters) {
+        $cfg = Get-NetIPConfiguration -InterfaceIndex $a.ifIndex -ErrorAction SilentlyContinue
+        $ips = @($cfg.IPv4Address | ForEach-Object { $_.IPAddress }) -join ', '
+        $gw = ($cfg.IPv4DefaultGateway | Select-Object -First 1).NextHop
+        $dns = @(Get-DnsClientServerAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Object { $_.ServerAddresses })
+        & $add 'Adaptador' "$($a.Name) ($($a.InterfaceDescription))" ''
+        & $add '   IP' $(if ($ips) { $ips } else { '—' }) ''
+        & $add '   Puerta de enlace' $(if ($gw) { $gw } else { '—' }) ''
+        & $add '   DNS' $(if ($dns.Count) { $dns -join ', ' } else { '—' }) ''
+        & $add '   MAC' $a.MacAddress ''
+        if (-not $gateway -and $gw) { $gateway = $gw }
+        if (-not $dnsServer -and $dns.Count) { $dnsServer = $dns[0] }
+    }
+    if ($adapters.Count -eq 0) { & $add 'Adaptadores de red' 'Ninguno conectado' $bad }
+
+    $gwOk = $null; $netOk = $null; $nameOk = $null
+    if ($gateway) {
+        $ms = Test-HostPing $gateway
+        $gwOk = $ms -ge 0
+        & $add 'Ping al router' $(if ($gwOk) { "$gateway · $ms ms" } else { "$gateway · sin respuesta" }) $(if ($gwOk) { $ok } else { $bad })
+    }
+    if ($dnsServer) {
+        $ms = Test-HostPing $dnsServer
+        & $add 'Ping al servidor DNS' $(if ($ms -ge 0) { "$dnsServer · $ms ms" } else { "$dnsServer · sin respuesta" }) $(if ($ms -ge 0) { $ok } else { $bad })
+    }
+    $ms = Test-HostPing '1.1.1.1'
+    $netOk = $ms -ge 0
+    & $add 'Ping a internet (1.1.1.1)' $(if ($netOk) { "$ms ms" } else { 'sin respuesta' }) $(if ($netOk) { $ok } else { $bad })
+    $resolved = Resolve-HostName 'google.com'
+    $nameOk = [bool]$resolved
+    & $add 'Resolución de nombres (google.com)' $(if ($nameOk) { $resolved } else { 'no se pudo resolver' }) $(if ($nameOk) { $ok } else { $bad })
+
+    if ($adapters.Count -eq 0) {
+        $summary = 'No hay adaptadores de red conectados: revisa el cable, el Wi-Fi o el modo avión.'; $kind = 'ERROR'
+    } elseif ($gateway -and -not $gwOk) {
+        $summary = 'El equipo no llega al router: revisa el cable o el Wi-Fi, o reinicia el router.'; $kind = 'ERROR'
+    } elseif (-not $netOk) {
+        $summary = 'El router responde pero no hay salida a internet: el problema está en el router o en el proveedor.'; $kind = 'WARN'
+    } elseif (-not $nameOk) {
+        $summary = 'Hay internet pero no se resuelven nombres: el DNS falla. Prueba cambiarlo más abajo.'; $kind = 'WARN'
+    } else {
+        $summary = 'La red funciona correctamente.'; $kind = 'OK'
+    }
+    Send-Data 'netDiag' @{ Rows = $rows.ToArray(); Summary = $summary; Kind = $kind }
+    Write-Log $summary $kind
+}
+
+function Set-DnsPreset {
+    param([ValidateSet('Auto', 'Google', 'Cloudflare')][string]$Preset)
+    $servers = @{ Google = @('8.8.8.8', '8.8.4.4'); Cloudflare = @('1.1.1.1', '1.0.0.1') }
+    $adapters = @(Get-NetAdapter -Physical -ErrorAction Stop | Where-Object Status -eq 'Up')
+    if ($adapters.Count -eq 0) { throw 'No hay adaptadores de red físicos conectados.' }
+    foreach ($a in $adapters) {
+        if ($Preset -eq 'Auto') {
+            Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ResetServerAddresses -ErrorAction Stop
+            Write-Log "'$($a.Name)': DNS automático (DHCP)." 'OK'
+        } else {
+            Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ServerAddresses $servers[$Preset] -ErrorAction Stop
+            Write-Log "'$($a.Name)': DNS $Preset ($($servers[$Preset] -join ', '))." 'OK'
+        }
+    }
+    Clear-DnsClientCache -ErrorAction Stop
+    Write-Log 'Caché DNS vaciada. Usa «Diagnosticar red» para comprobar el resultado.' 'OK'
+}
+
+function Get-SupportReport {
+    # Texto para pegar en un ticket de soporte; la UI lo copia al portapapeles.
+    Write-Log 'Armando el informe para soporte...'
+    $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
+    $bios = Get-CimInstance Win32_BIOS -ErrorAction Stop
+    $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $cpu = Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object -First 1
+    $sysDrive = $env:SystemDrive
+    $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$sysDrive'"
+    $uptime = (Get-Date) - $os.LastBootUpTime
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add("INFORME PARA SOPORTE · $(Get-Date -Format 'yyyy-MM-dd HH:mm')")
+    $lines.Add("Equipo: $env:COMPUTERNAME")
+    $lines.Add("Usuario: $env:USERDOMAIN\$env:USERNAME")
+    $lines.Add("Fabricante / modelo: $($cs.Manufacturer.Trim()) $($cs.Model.Trim())")
+    $lines.Add("Número de serie: $($bios.SerialNumber.Trim())")
+    $lines.Add("Sistema: $($os.Caption) · versión $($os.Version) · build $($os.BuildNumber)")
+    $lines.Add("Procesador: $($cpu.Name.Trim())")
+    $lines.Add(('Memoria RAM: {0:N1} GB ({1:N1} GB libres)' -f ($cs.TotalPhysicalMemory / 1GB), ($os.FreePhysicalMemory * 1KB / 1GB)))
+    $lines.Add(('Disco {0} {1:N1} GB libres de {2:N1} GB' -f $sysDrive, ($disk.FreeSpace / 1GB), ($disk.Size / 1GB)))
+    $lines.Add(('Encendido hace: {0}d {1}h {2}m' -f $uptime.Days, $uptime.Hours, $uptime.Minutes))
+    foreach ($a in @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up')) {
+        $cfg = Get-NetIPConfiguration -InterfaceIndex $a.ifIndex -ErrorAction SilentlyContinue
+        $ips = @($cfg.IPv4Address | ForEach-Object { $_.IPAddress }) -join ', '
+        $gw = ($cfg.IPv4DefaultGateway | Select-Object -First 1).NextHop
+        $lines.Add("Red: $($a.Name) · IP $ips · puerta de enlace $gw · MAC $($a.MacAddress)")
+    }
+    Send-Data 'supportReport' ($lines -join "`r`n")
 }
 
 function Get-HardwareInfo {
@@ -587,7 +777,10 @@ function Backup-UserProfile {
 $workerFunctions = @(
     'Write-Log', 'Send-Data', 'Invoke-Native', 'Get-Column', 'ConvertFrom-WingetTable',
     'Find-PendingUpgrades', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Find-WindowsUpdates', 'Install-WindowsUpdates', 'Test-PrinterSocket', 'Send-PrinterResult',
-    'Get-PrinterDriverNames', 'Test-PrinterConnection', 'Install-NetworkPrinter', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
+    'Get-PrinterDriverNames', 'Test-PrinterConnection', 'Send-PrinterTestPage', 'Get-InstalledPrinters',
+    'Update-PrinterData', 'Set-DefaultPrinterByName', 'Remove-PrinterByName', 'Clear-PrintQueueDeep',
+    'Install-NetworkPrinter', 'Test-HostPing', 'Resolve-HostName', 'Get-NetworkDiagnosis', 'Set-DnsPreset',
+    'Get-SupportReport', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
     'Restart-ServiceChecked', 'Restart-Spooler', 'Restart-WindowsUpdate', 'Restart-AudioServices',
     'Invoke-FullMaintenance', 'Get-ProfileFolders', 'Backup-UserProfile'
 )
@@ -713,6 +906,27 @@ $xaml = @"
           <Setter Property="Foreground" Value="#FFFFFF"/>
         </Trigger>
       </Style.Triggers>
+    </Style>
+    <Style x:Key="DataTable" TargetType="DataGrid">
+      <Setter Property="AutoGenerateColumns" Value="False"/>
+      <Setter Property="HeadersVisibility" Value="Column"/>
+      <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+      <Setter Property="HorizontalGridLinesBrush" Value="#22253A"/>
+      <Setter Property="CanUserAddRows" Value="False"/>
+      <Setter Property="SelectionMode" Value="Single"/>
+      <Setter Property="RowHeight" Value="30"/>
+      <Setter Property="Background" Value="#171824"/>
+      <Setter Property="RowBackground" Value="#171824"/>
+      <Setter Property="AlternatingRowBackground" Value="#1A1B28"/>
+      <Setter Property="Foreground" Value="#C5C9DB"/>
+      <Setter Property="BorderBrush" Value="#22253A"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="ColumnHeaderStyle" Value="{StaticResource GridHeader}"/>
+      <Setter Property="CellStyle" Value="{StaticResource GridCell}"/>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#C5C9DB"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
     </Style>
     <Style TargetType="TextBox">
       <Setter Property="Background" Value="#11121A"/>
@@ -931,7 +1145,10 @@ $serviceCards
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel>
             <DockPanel Margin="0,0,12,14">
-              <Button x:Name="btnRefreshHw" DockPanel.Dock="Right" Content="Volver a leer" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center"/>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="btnCopyReport" Content="Copiar informe para soporte" Style="{StaticResource AccentButton}" Margin="0,0,8,0"/>
+                <Button x:Name="btnRefreshHw" Content="Volver a leer" Style="{StaticResource SecondaryButton}"/>
+              </StackPanel>
               <StackPanel>
                 <TextBlock Text="Hardware y sistema" Style="{StaticResource SectionTitle}"/>
                 <TextBlock Text="Datos leídos de Windows (CIM) al abrir el panel." Style="{StaticResource SectionText}"/>
@@ -958,11 +1175,7 @@ $infoCards
             </StackPanel>
           </DockPanel>
           <TextBlock x:Name="upgSummary" DockPanel.Dock="Top" Margin="0,0,0,10" Text="Usa «Buscar actualizaciones» para ver qué aplicaciones tienen versión nueva."/>
-          <DataGrid x:Name="upgGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
-                    GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#22253A" CanUserAddRows="False"
-                    SelectionMode="Single" RowHeight="30" Background="#171824" RowBackground="#171824"
-                    AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1"
-                    ColumnHeaderStyle="{StaticResource GridHeader}" CellStyle="{StaticResource GridCell}">
+          <DataGrid x:Name="upgGrid" Style="{StaticResource DataTable}">
             <DataGrid.Columns>
               <DataGridTemplateColumn Header="" Width="44">
                 <DataGridTemplateColumn.CellTemplate>
@@ -997,11 +1210,7 @@ $infoCards
           <TextBlock x:Name="winReboot" DockPanel.Dock="Top" Margin="0,0,0,6" Visibility="Collapsed" Foreground="#F5D58A" FontWeight="SemiBold"
                      Text="⚠ Hay un reinicio pendiente. Reinicia el equipo para terminar de aplicar las actualizaciones."/>
           <TextBlock x:Name="winSummary" DockPanel.Dock="Top" Margin="0,0,0,10" Text="Usa «Buscar actualizaciones» para ver qué actualizaciones de Windows hay pendientes (puede tardar unos minutos)."/>
-          <DataGrid x:Name="winGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
-                    GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#22253A" CanUserAddRows="False"
-                    SelectionMode="Single" RowHeight="30" Background="#171824" RowBackground="#171824"
-                    AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1"
-                    ColumnHeaderStyle="{StaticResource GridHeader}" CellStyle="{StaticResource GridCell}">
+          <DataGrid x:Name="winGrid" Style="{StaticResource DataTable}">
             <DataGrid.Columns>
               <DataGridTemplateColumn Header="" Width="44">
                 <DataGridTemplateColumn.CellTemplate>
@@ -1017,6 +1226,40 @@ $infoCards
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Red">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <DockPanel Margin="0,0,12,14">
+              <Button x:Name="btnNetDiag" DockPanel.Dock="Right" Content="Diagnosticar red" Style="{StaticResource AccentButton}" VerticalAlignment="Center"/>
+              <StackPanel>
+                <TextBlock Text="Diagnóstico de red" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Text="Muestra IP, DNS y MAC de los adaptadores conectados y prueba, en orden, el router, internet y la resolución de nombres para ubicar dónde falla." Style="{StaticResource SectionText}"/>
+              </StackPanel>
+            </DockPanel>
+            <TextBlock x:Name="netSummary" Margin="0,0,12,10" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="#7E849E"
+                       Text="Pulsa «Diagnosticar red» para empezar."/>
+            <DataGrid x:Name="netGrid" Style="{StaticResource DataTable}" IsReadOnly="True" Height="300" Margin="0,0,12,0">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Prueba" Binding="{Binding Test}" Width="2*"/>
+                <DataGridTextColumn Header="Resultado" Binding="{Binding Result}" Width="3*"/>
+                <DataGridTextColumn Header="Estado" Binding="{Binding State}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+            <Border Style="{StaticResource Card}" Margin="0,16,12,12">
+              <StackPanel>
+                <TextBlock Text="SERVIDORES DNS" Style="{StaticResource Eyebrow}"/>
+                <TextBlock Style="{StaticResource CardText}" Margin="0,0,0,12"
+                           Text="Se aplican a los adaptadores físicos conectados y vacían la caché DNS. Requiere administrador. Útil cuando hay internet pero algunas páginas no cargan."/>
+                <RadioButton x:Name="dnsAuto" Content="Automático (los entrega el router por DHCP)" IsChecked="True" GroupName="dns"/>
+                <RadioButton x:Name="dnsGoogle" Content="Google  ·  8.8.8.8 y 8.8.4.4" GroupName="dns"/>
+                <RadioButton x:Name="dnsCloudflare" Content="Cloudflare  ·  1.1.1.1 y 1.0.0.1" GroupName="dns"/>
+                <Button x:Name="btnDnsApply" Content="Aplicar DNS" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Impresoras">
@@ -1047,6 +1290,31 @@ $infoCards
               </StackPanel>
             </Border>
             <Button x:Name="btnPrnInstall" Content="Instalar impresora" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"/>
+            <Border Style="{StaticResource Card}" Margin="0,20,12,12">
+              <StackPanel>
+                <DockPanel Margin="0,0,0,10">
+                  <Button x:Name="btnPrnRefresh" DockPanel.Dock="Right" Content="Actualizar lista" Style="{StaticResource GhostButton}"/>
+                  <TextBlock Text="IMPRESORAS INSTALADAS" Style="{StaticResource Eyebrow}" Margin="0" VerticalAlignment="Center"/>
+                </DockPanel>
+                <DataGrid x:Name="prnList" Style="{StaticResource DataTable}" IsReadOnly="True" Height="190">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="2*"/>
+                    <DataGridTextColumn Header="Controlador" Binding="{Binding Driver}" Width="1.8*"/>
+                    <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="1.3*"/>
+                    <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="118"/>
+                    <DataGridTextColumn Header="Pred." Binding="{Binding IsDefault}" Width="64"/>
+                  </DataGrid.Columns>
+                </DataGrid>
+                <WrapPanel Margin="0,12,0,0">
+                  <Button x:Name="btnPrnDefault" Content="Predeterminada" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+                  <Button x:Name="btnPrnTestPage" Content="Página de prueba" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+                  <Button x:Name="btnPrnRemove" Content="Quitar" Style="{StaticResource DangerButton}" Margin="0,0,8,6"/>
+                  <Button x:Name="btnPrnClearQueue" Content="Limpiar cola a fondo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,6"/>
+                </WrapPanel>
+                <TextBlock Style="{StaticResource CardText}" Margin="0,4,0,0"
+                           Text="«Limpiar cola a fondo» detiene el Spooler, borra los trabajos atascados y lo vuelve a iniciar (administrador). Los trabajos pendientes se pierden."/>
+              </StackPanel>
+            </Border>
           </StackPanel>
         </ScrollViewer>
       </TabItem>
@@ -1114,7 +1382,9 @@ foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText',
         'btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll', 'btnRefreshHw',
         'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget',
         'btnWinScan', 'btnWinInstall', 'winSummary', 'winReboot', 'winGrid',
-        'prnName', 'prnIp', 'prnDrivers', 'prnDefault', 'prnTestPage', 'prnResult', 'btnPrnTest', 'btnPrnReload', 'btnPrnInstall')) {
+        'prnName', 'prnIp', 'prnDrivers', 'prnDefault', 'prnTestPage', 'prnResult', 'btnPrnTest', 'btnPrnReload', 'btnPrnInstall',
+        'prnList', 'btnPrnRefresh', 'btnPrnDefault', 'btnPrnTestPage', 'btnPrnRemove', 'btnPrnClearQueue',
+        'btnNetDiag', 'netGrid', 'netSummary', 'dnsAuto', 'dnsGoogle', 'dnsCloudflare', 'btnDnsApply', 'btnCopyReport')) {
     $ui[$name] = $window.FindName($name)
 }
 $hwKeys = @('Cpu', 'Gpu', 'Ram', 'Disk', 'Os', 'Pc')
@@ -1124,7 +1394,8 @@ foreach ($k in $hwKeys) {
 }
 $actionButtons = @('btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll',
     'btnRefreshHw', 'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'btnWinScan', 'btnWinInstall',
-    'btnPrnTest', 'btnPrnReload', 'btnPrnInstall', 'btnClean') | ForEach-Object { $ui[$_] }
+    'btnPrnTest', 'btnPrnReload', 'btnPrnInstall', 'btnPrnRefresh', 'btnPrnDefault', 'btnPrnTestPage', 'btnPrnRemove',
+    'btnPrnClearQueue', 'btnNetDiag', 'btnDnsApply', 'btnCopyReport', 'btnClean') | ForEach-Object { $ui[$_] }
 
 $brushConverter = New-Object Windows.Media.BrushConverter
 $logBrushes = @{}
@@ -1229,6 +1500,21 @@ function Receive-Data {
         }
         'winReboot' { $ui.winReboot.Visibility = 'Visible' }
         'printerDrivers' { $ui.prnDrivers.ItemsSource = @($Item.Value) }
+        'printerList' { $ui.prnList.ItemsSource = @($Item.Value) }
+        'netDiag' {
+            $ui.netGrid.ItemsSource = @($Item.Value.Rows)
+            $ui.netSummary.Text = $Item.Value.Summary
+            $ui.netSummary.Foreground = $logBrushes[$Item.Value.Kind]
+        }
+        'supportReport' {
+            try {
+                [Windows.Clipboard]::SetText([string]$Item.Value)
+                Write-Log 'Informe copiado al portapapeles: pégalo en el ticket de soporte.' 'OK'
+            } catch {
+                # El portapapeles puede estar bloqueado un instante por otra aplicación.
+                Write-Log "No se pudo copiar al portapapeles: $($_.Exception.Message)" 'WARN'
+            }
+        }
         'printerResult' {
             $ui.prnResult.Text = $Item.Value.Text
             $ui.prnResult.Foreground = $logBrushes[$Item.Value.Kind]
@@ -1334,7 +1620,7 @@ $ui.tabs.Add_SelectionChanged({
         if ($e.OriginalSource -ne $ui.tabs) { return }
         if ($ui.tabs.SelectedItem.Header -eq 'Impresoras' -and -not $script:driversLoaded -and -not $script:task) {
             $script:driversLoaded = $true
-            Start-Task 'Leer controladores de impresora' 'Get-PrinterDriverNames'
+            Start-Task 'Leer controladores e impresoras' 'Update-PrinterData'
         }
     })
 
@@ -1355,7 +1641,51 @@ function Set-PrinterFormMessage {
     Write-Log $Text 'WARN'
 }
 
-$ui.btnPrnReload.Add_Click({ Start-Task 'Leer controladores de impresora' 'Get-PrinterDriverNames' })
+$ui.btnNetDiag.Add_Click({ Start-Task 'Diagnosticar red' 'Get-NetworkDiagnosis' })
+$ui.btnCopyReport.Add_Click({ Start-Task 'Armar informe para soporte' 'Get-SupportReport' })
+
+$ui.btnDnsApply.Add_Click({
+        $preset = if ($ui.dnsGoogle.IsChecked) { 'Google' } elseif ($ui.dnsCloudflare.IsChecked) { 'Cloudflare' } else { 'Auto' }
+        Start-Task "Aplicar DNS ($preset)" 'Set-DnsPreset' @{ Preset = $preset }
+    })
+
+function Get-SelectedPrinterName {
+    $row = $ui.prnList.SelectedItem
+    if (-not $row) {
+        Write-Log 'Selecciona una impresora de la lista.' 'WARN'
+        return $null
+    }
+    return [string]$row.Name
+}
+
+$ui.btnPrnRefresh.Add_Click({ Start-Task 'Leer impresoras' 'Get-InstalledPrinters' })
+
+$ui.btnPrnDefault.Add_Click({
+        $name = Get-SelectedPrinterName
+        if ($name) { Start-Task "Predeterminada: $name" 'Set-DefaultPrinterByName' @{ Name = $name } }
+    })
+
+$ui.btnPrnTestPage.Add_Click({
+        $name = Get-SelectedPrinterName
+        if ($name) { Start-Task "Página de prueba: $name" 'Send-PrinterTestPage' @{ Name = $name } }
+    })
+
+$ui.btnPrnRemove.Add_Click({
+        $name = Get-SelectedPrinterName
+        if (-not $name) { return }
+        $answer = [Windows.MessageBox]::Show($window, "Se quitará la impresora:`n`n$name`n`nSu puerto TCP/IP se conserva. ¿Continuar?",
+            'Quitar impresora', 'YesNo', 'Warning', 'No')
+        if ($answer -eq 'Yes') { Start-Task "Quitar impresora: $name" 'Remove-PrinterByName' @{ Name = $name } }
+    })
+
+$ui.btnPrnClearQueue.Add_Click({
+        $answer = [Windows.MessageBox]::Show($window,
+            "Se detendrá el Spooler, se borrarán TODOS los trabajos de impresión pendientes y se volverá a iniciar.`n`n¿Continuar?",
+            'Limpiar cola de impresión', 'YesNo', 'Warning', 'No')
+        if ($answer -eq 'Yes') { Start-Task 'Limpiar cola de impresión a fondo' 'Clear-PrintQueueDeep' }
+    })
+
+$ui.btnPrnReload.Add_Click({ Start-Task 'Leer controladores e impresoras' 'Update-PrinterData' })
 
 $ui.btnPrnTest.Add_Click({
         $hostName = $ui.prnIp.Text.Trim()

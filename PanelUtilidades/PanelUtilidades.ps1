@@ -79,7 +79,9 @@ function Invoke-Native {
     $stdout = $proc.StandardOutput.ReadToEndAsync()
     $stderr = $proc.StandardError.ReadToEndAsync()
     if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
-        try { $proc.Kill() } catch {}
+        # /T mata también a los hijos: winget lanza el instalador como proceso aparte y
+        # Kill() solo cerraría a winget, dejando el instalador corriendo.
+        $null = Invoke-Native -File 'taskkill.exe' -Arguments "/PID $($proc.Id) /T /F" -TimeoutSeconds 15
         return [pscustomobject]@{ Code = -1; TimedOut = $true; Output = ''; Error = '' }
     }
     $proc.WaitForExit()
@@ -139,6 +141,62 @@ function Find-PendingUpgrades {
         if ($last) { Write-Log "winget: $($last.Trim())" }
         Write-Log 'No hay aplicaciones con actualización pendiente.' 'OK'
     }
+}
+
+function Get-WingetErrorMessage {
+    # Mismos códigos que traduce ActualizarApps (ver su comentario para el origen de cada uno).
+    param([int]$Code)
+    switch ($Code) {
+        -1978335090 { 'tecnología de instalación distinta a la actual: desinstalar y reinstalar a mano' }
+        default { "código $Code" }
+    }
+}
+
+function Install-SelectedUpgrades {
+    # Instala de a una las apps marcadas, con límite de tiempo por app. Cada cambio de
+    # estado va a la tabla por Send-Data; un fallo no corta a las demás.
+    param([object[]]$Apps, [int]$TimeoutSeconds = 300)
+
+    if (@(Get-Process -Name winget -ErrorAction SilentlyContinue).Count -gt 0) {
+        foreach ($app in $Apps) { Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = 'Pendiente' } }
+        throw 'Ya hay otro winget corriendo; dos instalaciones a la vez se pisan. Espera a que termine y vuelve a intentar.'
+    }
+
+    $done = 0; $skipped = 0; $failed = 0; $index = 0
+    foreach ($app in $Apps) {
+        $index++
+        Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = 'Instalando…' }
+        Write-Log "[$index/$($Apps.Count)] $($app.Name)" 'STEP'
+
+        $wingetArgs = "upgrade --id `"$($app.Id)`" --silent --include-unknown --disable-interactivity --accept-package-agreements --accept-source-agreements"
+        if ($app.Source) { $wingetArgs += " --source `"$($app.Source)`"" }
+        $clock = [Diagnostics.Stopwatch]::StartNew()
+        $r = Invoke-Native -File 'winget.exe' -Arguments $wingetArgs -Utf8 -TimeoutSeconds $TimeoutSeconds
+        $took = '{0:mm\:ss}' -f $clock.Elapsed
+
+        if ($r.TimedOut) {
+            $failed++
+            Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = 'Sin respuesta' }
+            Write-Log "$($app.Name): sin respuesta tras $took, cancelado." 'WARN'
+        } elseif ($r.Code -eq 0) {
+            $done++
+            Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = "Actualizada ($took)" }
+            Write-Log "$($app.Name): actualizada en $took." 'OK'
+        } elseif ($r.Code -eq -1978335189) {
+            # 0x8A15002B: no hay actualización aplicable (p. ej. ya la instaló otro proceso).
+            $skipped++
+            Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = 'Sin cambios' }
+            Write-Log "$($app.Name): sin actualización aplicable (posiblemente ya actualizada)." 'WARN'
+        } else {
+            $failed++
+            $why = Get-WingetErrorMessage $r.Code
+            Send-Data 'upgradeStatus' @{ Id = $app.Id; Status = 'Falló' }
+            Write-Log "$($app.Name): falló ($why)." 'ERROR'
+        }
+    }
+
+    $summaryType = if ($failed -gt 0) { 'WARN' } else { 'OK' }
+    Write-Log "Resultado: $done actualizada(s), $skipped sin cambios, $failed con error. Usa «Buscar actualizaciones» para refrescar la lista." $summaryType
 }
 
 function Get-HardwareInfo {
@@ -330,7 +388,7 @@ function Backup-UserProfile {
 
 $workerFunctions = @(
     'Write-Log', 'Send-Data', 'Invoke-Native', 'Get-Column', 'ConvertFrom-WingetTable',
-    'Find-PendingUpgrades', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
+    'Find-PendingUpgrades', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
     'Restart-ServiceChecked', 'Restart-Spooler', 'Restart-WindowsUpdate', 'Restart-AudioServices',
     'Invoke-FullMaintenance', 'Get-ProfileFolders', 'Backup-UserProfile'
 )
@@ -622,15 +680,16 @@ $infoCards
           <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
               <Button x:Name="btnScan" Content="Buscar actualizaciones" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-              <Button x:Name="btnRunUpdater" Content="Actualizar todo" Style="{StaticResource AccentButton}"/>
+              <Button x:Name="btnRunUpdater" Content="Actualizar todo" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+              <Button x:Name="btnInstallSelected" Content="Actualizar seleccionadas" Style="{StaticResource AccentButton}"/>
             </StackPanel>
             <StackPanel>
               <TextBlock Text="Actualizaciones de software" Style="{StaticResource SectionTitle}"/>
-              <TextBlock Text="«Actualizar todo» abre ActualizarApps en su propia ventana, con log, límite de tiempo por app y revisión de navegadores y driver NVIDIA." Style="{StaticResource SectionText}"/>
+              <TextBlock Text="«Actualizar seleccionadas» instala aquí las marcadas, con límite de 5 min por app. «Actualizar todo» abre ActualizarApps en su propia ventana, con log y revisión de navegadores y driver NVIDIA." Style="{StaticResource SectionText}"/>
             </StackPanel>
           </DockPanel>
           <TextBlock x:Name="upgSummary" DockPanel.Dock="Top" Margin="0,0,0,10" Text="Usa «Buscar actualizaciones» para ver qué aplicaciones tienen versión nueva."/>
-          <DataGrid x:Name="upgGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+          <DataGrid x:Name="upgGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
                     GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#22253A" CanUserAddRows="False"
                     SelectionMode="Single" RowHeight="30" Background="#171824" RowBackground="#171824"
                     AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1">
@@ -666,11 +725,19 @@ $infoCards
               </Style>
             </DataGrid.CellStyle>
             <DataGrid.Columns>
-              <DataGridTextColumn Header="Aplicación" Binding="{Binding Name}" Width="2*"/>
-              <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="2*"/>
-              <DataGridTextColumn Header="Instalada" Binding="{Binding Version}" Width="*"/>
-              <DataGridTextColumn Header="Disponible" Binding="{Binding Available}" Width="*"/>
-              <DataGridTextColumn Header="Origen" Binding="{Binding Source}" Width="0.7*"/>
+              <DataGridTemplateColumn Header="" Width="44">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <CheckBox IsChecked="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Aplicación" Binding="{Binding Name}" IsReadOnly="True" Width="2*"/>
+              <DataGridTextColumn Header="Id" Binding="{Binding Id}" IsReadOnly="True" Width="2*"/>
+              <DataGridTextColumn Header="Instalada" Binding="{Binding Version}" IsReadOnly="True" Width="*"/>
+              <DataGridTextColumn Header="Disponible" Binding="{Binding Available}" IsReadOnly="True" Width="*"/>
+              <DataGridTextColumn Header="Origen" Binding="{Binding Source}" IsReadOnly="True" Width="0.7*"/>
+              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" Width="1.2*"/>
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
@@ -737,7 +804,7 @@ $ui = @{}
 foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText', 'busyBar', 'logBox', 'btnCopyLog', 'btnClearLog',
         'btnToggleLog', 'consoleRow', 'consoleSplitter', 'servicesGrid', 'hwGrid',
         'btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll', 'btnRefreshHw',
-        'btnScan', 'btnRunUpdater', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget')) {
+        'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget')) {
     $ui[$name] = $window.FindName($name)
 }
 $hwKeys = @('Cpu', 'Gpu', 'Ram', 'Disk', 'Os', 'Pc')
@@ -746,7 +813,7 @@ foreach ($k in $hwKeys) {
     $ui["hw${k}Detail"] = $window.FindName("hw${k}Detail")
 }
 $actionButtons = @('btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll',
-    'btnRefreshHw', 'btnScan', 'btnRunUpdater', 'btnClean') | ForEach-Object { $ui[$_] }
+    'btnRefreshHw', 'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'btnClean') | ForEach-Object { $ui[$_] }
 
 $brushConverter = New-Object Windows.Media.BrushConverter
 $logBrushes = @{}
@@ -824,9 +891,19 @@ function Receive-Data {
             }
         }
         'upgrades' {
-            $apps = @($Item.Value)
-            $ui.upgGrid.ItemsSource = $apps
-            $ui.upgSummary.Text = if ($apps.Count) { "$($apps.Count) aplicación(es) con versión nueva. «Actualizar todo» las instala." } else { 'Todo al día: winget no encontró actualizaciones.' }
+            # Filas propias de la UI: llevan la casilla (marcadas de entrada) y el estado.
+            $script:upgRows = @($Item.Value | ForEach-Object {
+                    [pscustomobject]@{ Selected = $true; Name = $_.Name; Id = $_.Id; Version = $_.Version; Available = $_.Available; Source = $_.Source; Status = 'Pendiente' }
+                })
+            $ui.upgGrid.ItemsSource = $script:upgRows
+            $ui.upgSummary.Text = if ($script:upgRows.Count) { "$($script:upgRows.Count) aplicación(es) con versión nueva. Desmarca las que no quieras y pulsa «Actualizar seleccionadas»." } else { 'Todo al día: winget no encontró actualizaciones.' }
+        }
+        'upgradeStatus' {
+            $row = $script:upgRows | Where-Object { $_.Id -eq $Item.Value.Id } | Select-Object -First 1
+            if ($row) {
+                $row.Status = $Item.Value.Status
+                $ui.upgGrid.Items.Refresh()
+            }
         }
     }
 }
@@ -844,10 +921,11 @@ function Set-Busy {
 $script:task = $null
 
 function Start-Task {
-    param([string]$Title, [string]$Command)
+    param([string]$Title, [string]$Command, [hashtable]$Parameters)
     if ($script:task) { return }
     $ps = [powershell]::Create($iss)
     [void]$ps.AddCommand($Command)
+    if ($Parameters) { [void]$ps.AddParameters($Parameters) }
     Set-Busy $true $Title
     Write-Log $Title 'STEP'
     $script:task = @{ PS = $ps; Handle = $ps.BeginInvoke(); Title = $Title; Clock = [Diagnostics.Stopwatch]::StartNew() }
@@ -897,6 +975,20 @@ $ui.btnUpdate.Add_Click({ Start-Task 'Reiniciar Windows Update' 'Restart-Windows
 $ui.btnAll.Add_Click({ Start-Task 'Mantenimiento completo' 'Invoke-FullMaintenance' })
 $ui.btnRefreshHw.Add_Click({ Start-Task 'Leer hardware' 'Get-HardwareInfo' })
 $ui.btnScan.Add_Click({ Start-Task 'Buscar actualizaciones' 'Find-PendingUpgrades' })
+
+$ui.btnInstallSelected.Add_Click({
+        # Se manda una copia mínima: el runspace no debe tocar los objetos de la tabla.
+        $selected = @($script:upgRows | Where-Object { $_.Selected } | ForEach-Object {
+                [pscustomobject]@{ Name = $_.Name; Id = $_.Id; Source = $_.Source }
+            })
+        if ($selected.Count -eq 0) {
+            Write-Log 'No hay aplicaciones marcadas. Usa «Buscar actualizaciones» y marca las que quieras instalar.' 'WARN'
+            return
+        }
+        foreach ($row in $script:upgRows) { if ($row.Selected) { $row.Status = 'En cola' } }
+        $ui.upgGrid.Items.Refresh()
+        Start-Task "Actualizar $($selected.Count) aplicación(es)" 'Install-SelectedUpgrades' @{ Apps = $selected }
+    })
 
 $ui.btnRunUpdater.Add_Click({
         $exe = Join-Path $rootDir 'ActualizarApps\ActualizarApps.exe'

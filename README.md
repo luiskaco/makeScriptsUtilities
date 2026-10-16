@@ -88,7 +88,7 @@ Ventana nativa de Windows (PowerShell + WPF) con cuatro pestañas y una consola 
 
 - **Servicios:** reinicia el Explorador, los adaptadores de red (más `flushdns` y `ipconfig /renew`), la cola de impresión, los servicios de audio y Windows Update. "Mantenimiento completo" corre todo en secuencia y sigue aunque falle un paso.
 - **Hardware:** CPU, GPU, RAM, disco del sistema, SO y tiempo encendido.
-- **Actualizaciones:** lista lo que `winget` puede actualizar; "Actualizar todo" abre `ActualizarApps.exe` en su propia ventana.
+- **Actualizaciones:** lista lo que `winget` puede actualizar, con una casilla por app (todas marcadas de entrada) y una columna de estado. "Actualizar seleccionadas" instala las marcadas dentro del panel, con límite de 5 min por app; "Actualizar todo" abre `ActualizarApps.exe` en su propia ventana.
 - **Limpieza de perfil:** mueve Escritorio, Descargas y Documentos a `Escritorio\Respaldo_Usuario` con `robocopy` y restablece el fondo de pantalla. Pide confirmación antes de empezar.
 
 Las tareas corren en un runspace aparte, así que la ventana no se congela mientras trabajan.

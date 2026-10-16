@@ -27,9 +27,11 @@
   - Consola de logs en vivo en el navegador con terminal interactiva, auto-scroll y botones de copiar/limpiar.
   - Lanzadores directos `Abrir-Utilidad-Web.bat` y `utilities/Abrir-Web.bat`.
 - [x] **Panel nativo `PanelUtilidades/` (reemplaza al panel web)**
-  - Ventana WPF en PowerShell con pestañas Servicios, Hardware, Actualizaciones y Limpieza de perfil, y consola de log.
+  - Ventana WPF en PowerShell con pestañas Servicios, Hardware, Actualizaciones, Windows Update, Impresoras y Limpieza de perfil, y consola de log.
   - Tareas en runspace aparte con cola sincronizada; la UI no se bloquea.
   - Compilado a `PanelUtilidades.exe` con `ps2exe -noConsole -STA -requireAdmin`.
+  - Pestaña Windows Update (API COM): buscar e instalar actualizaciones del sistema desde el panel (2026-10-16).
+  - Pestaña Impresoras: configurar impresora de red TCP/IP 9100, recuperada de `AsistenciaOrange` (2026-10-16).
   - Eliminados `web/`, `Abrir-Utilidad-Web.bat` y `Limpiar-Perfil.bat` (su lógica vive ahora en el panel).
 - [x] **Estructura Completa de Documentación `/docs` y `README.md`**
   - Creación de los documentos PRD, SDD, SYSTEM SPEC, DATA MODEL, ARCHITECTURE, TASKS, DECISIONS, CHANGELOG y CONTEXT.

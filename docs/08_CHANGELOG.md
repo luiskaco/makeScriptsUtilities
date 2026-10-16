@@ -7,9 +7,12 @@ Todas las modificaciones notables de la suite **MakeScriptsUtilities** se docume
 ## [Unreleased]
 
 ### Añadido (Added)
+- **`PanelUtilidades`**: pestaña «Impresoras» (recupera la función de `AsistenciaOrange`, commit `cde6fc7`). Crea el puerto TCP/IP estándar RAW 9100 con `Add-PrinterPort` y registra la impresora con `Add-Printer` usando un controlador ya instalado; prueba de socket al puerto 9100, validación del nombre y de la IP o host, y opciones de predeterminada y página de prueba. La IP viene prellenada con `192.168.8.1` (editable). Si la impresora ya existe, actualiza puerto y controlador. `PanelUtilidades.exe` recompilado.
+- **`PanelUtilidades`**: pestaña «Windows Update», separada de las apps. Usa la API COM `Microsoft.Update.Session` para buscar e instalar las actualizaciones de Windows con casilla y estado por fila. Instala de a una (una que falla no corta a las demás), sin límite de tiempo, y avisa si queda un reinicio pendiente sin reiniciar. Omite las que piden licencia o interacción. Las tablas de las dos pestañas comparten estilos. `PanelUtilidades.exe` recompilado.
 - **`PanelUtilidades/`**: panel nativo de Windows (PowerShell + WPF) compilado a `PanelUtilidades.exe`. Trae las 10 acciones del panel web: reinicio de Explorador, red, cola de impresión, audio y Windows Update; mantenimiento completo; hardware; búsqueda de actualizaciones con `winget`; respaldo y limpieza de perfil.
 
 ### Cambiado (Changed)
+- **`PanelUtilidades`**: paleta pastel en lugar del naranja de marca. Acento lavanda `#A5B4FC` (botones, pestaña activa, selección, ícono y progreso), aviso ámbar suave, OK menta y error rosa; los botones pastel llevan texto oscuro. El tema oscuro no cambia. `PanelUtilidades.exe` recompilado.
 - **`PanelUtilidades`**: pestaña Actualizaciones con casillas (marcadas de entrada) y columna de estado; «Actualizar seleccionadas» instala dentro del panel de a una app, con límite de 5 min cada una y sin cortar la serie si una falla. Al vencer el plazo se mata el árbol completo de procesos de `winget`, no solo a `winget`. Si ya hay otro `winget` corriendo, no empieza. `PanelUtilidades.exe` recompilado.
 - Red: se reinician los adaptadores físicos conectados, no una interfaz llamada literalmente "Wi-Fi".
 - Mantenimiento completo: un paso que falla ya no corta la secuencia.

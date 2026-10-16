@@ -199,6 +199,204 @@ function Install-SelectedUpgrades {
     Write-Log "Resultado: $done actualizada(s), $skipped sin cambios, $failed con error. Usa «Buscar actualizaciones» para refrescar la lista." $summaryType
 }
 
+function Find-WindowsUpdates {
+    Write-Log 'Buscando actualizaciones de Windows (puede tardar varios minutos)...'
+    $session = New-Object -ComObject Microsoft.Update.Session
+    $found = $session.CreateUpdateSearcher().Search('IsInstalled=0 and IsHidden=0')
+    $list = New-Object System.Collections.Generic.List[object]
+    foreach ($u in $found.Updates) {
+        $kb = @($u.KBArticleIDs | ForEach-Object { "KB$_" }) -join ', '
+        $needsUser = [bool]$u.InstallationBehavior.CanRequestUserInput -or -not $u.EulaAccepted
+        $list.Add([pscustomobject]@{
+                Id        = $u.Identity.UpdateID
+                Title     = $u.Title
+                Kb        = $kb
+                Type      = if ($u.Type -eq 2) { 'Controlador' } else { 'Software' }
+                NeedsUser = $needsUser
+            })
+    }
+    Send-Data 'winUpdates' $list.ToArray()
+    if ((New-Object -ComObject Microsoft.Update.SystemInfo).RebootRequired) { Send-Data 'winReboot' $true }
+    if ($list.Count -gt 0) {
+        Write-Log "$($list.Count) actualización(es) de Windows disponible(s)." 'OK'
+    } else {
+        Write-Log 'Windows está al día.' 'OK'
+    }
+}
+
+function Install-WindowsUpdates {
+    # Descarga e instala de a una para informar el estado de cada fila; una que falla no
+    # corta a las demás. Se vuelve a buscar porque los objetos COM de la búsqueda anterior
+    # no viajan a este runspace. No se fuerza ningún reinicio: solo se avisa.
+    param([string[]]$Ids)
+
+    $session = New-Object -ComObject Microsoft.Update.Session
+    $found = $session.CreateUpdateSearcher().Search('IsInstalled=0 and IsHidden=0')
+    $byId = @{}
+    foreach ($u in $found.Updates) { $byId[$u.Identity.UpdateID] = $u }
+
+    $done = 0; $skipped = 0; $failed = 0; $reboot = $false; $index = 0
+    foreach ($id in $Ids) {
+        $index++
+        $u = $byId[$id]
+        if (-not $u) {
+            $skipped++
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Ya no aplica' }
+            Write-Log "[$index/$($Ids.Count)] Una actualización ya no aparece como pendiente; se omite." 'WARN'
+            continue
+        }
+        Write-Log "[$index/$($Ids.Count)] $($u.Title)" 'STEP'
+        if ($u.InstallationBehavior.CanRequestUserInput -or -not $u.EulaAccepted) {
+            $skipped++
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Requiere interacción' }
+            Write-Log 'Pide aceptar una licencia o responder en pantalla; instálala desde Configuración de Windows.' 'WARN'
+            continue
+        }
+        try {
+            $coll = New-Object -ComObject Microsoft.Update.UpdateColl
+            [void]$coll.Add($u)
+            if (-not $u.IsDownloaded) {
+                Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Descargando…' }
+                $downloader = $session.CreateUpdateDownloader()
+                $downloader.Updates = $coll
+                $dl = $downloader.Download()
+                if ($dl.ResultCode -ne 2) { throw "la descarga terminó con código $($dl.ResultCode)" }
+            }
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Instalando…' }
+            $installer = $session.CreateUpdateInstaller()
+            $installer.Updates = $coll
+            $installer.AllowSourcePrompts = $false
+            $r = $installer.Install()
+            if ($r.RebootRequired) { $reboot = $true }
+            switch ([int]$r.ResultCode) {
+                2 {
+                    $done++
+                    $note = if ($r.RebootRequired) { 'Instalada (reiniciar)' } else { 'Instalada' }
+                    Send-Data 'winUpdateStatus' @{ Id = $id; Status = $note }
+                    Write-Log "$($u.Title): instalada." 'OK'
+                }
+                3 {
+                    $done++
+                    Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Instalada con avisos' }
+                    Write-Log "$($u.Title): instalada con avisos." 'WARN'
+                }
+                default { throw ('resultado {0}, HRESULT 0x{1:X8}' -f [int]$r.ResultCode, $r.GetUpdateResult(0).HResult) }
+            }
+        } catch {
+            $failed++
+            $why = $_.Exception.Message
+            # 0x80070005: el instalador de Windows Update exige permisos de administrador.
+            if ($_.Exception.HResult -eq -2147024891) { $why = 'acceso denegado: abre el panel como administrador' }
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Falló' }
+            Write-Log "$($u.Title): falló ($why)." 'ERROR'
+        }
+    }
+
+    $type = if ($failed -gt 0) { 'WARN' } else { 'OK' }
+    Write-Log "Resultado: $done instalada(s), $skipped omitida(s), $failed con error." $type
+    if ($reboot) {
+        Send-Data 'winReboot' $true
+        Write-Log 'Hay que reiniciar el equipo para terminar de aplicar las actualizaciones.' 'WARN'
+    }
+}
+
+function Test-PrinterSocket {
+    param([string]$HostName, [int]$Port = 9100, [int]$TimeoutMs = 2000)
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    try {
+        $iar = $tcp.BeginConnect($HostName, $Port, $null, $null)
+        if ($iar.AsyncWaitHandle.WaitOne($TimeoutMs, $false) -and $tcp.Connected) {
+            $tcp.EndConnect($iar)
+            return $true
+        }
+        return $false
+    } catch {
+        return $false
+    } finally {
+        $tcp.Close()
+    }
+}
+
+function Send-PrinterResult {
+    param([string]$Text, [ValidateSet('OK', 'WARN', 'ERROR')][string]$Kind)
+    Send-Data 'printerResult' @{ Text = $Text; Kind = $Kind }
+}
+
+function Get-PrinterDriverNames {
+    $names = @(Get-PrinterDriver -ErrorAction Stop | Select-Object -ExpandProperty Name | Sort-Object -Unique)
+    Send-Data 'printerDrivers' $names
+    if ($names.Count -gt 0) {
+        Write-Log "$($names.Count) controlador(es) de impresora instalado(s) en Windows." 'OK'
+    } else {
+        Write-Log 'Windows no tiene controladores de impresora instalados; instala primero el del fabricante.' 'WARN'
+    }
+}
+
+function Test-PrinterConnection {
+    param([string]$HostName)
+    Write-Log "Probando ${HostName}:9100..."
+    if (Test-PrinterSocket -HostName $HostName -TimeoutMs 3000) {
+        Write-Log "${HostName}:9100 responde." 'OK'
+        Send-PrinterResult "✔ La impresora responde en ${HostName}:9100." 'OK'
+    } else {
+        Write-Log "${HostName}:9100 no responde." 'WARN'
+        Send-PrinterResult "✖ Sin respuesta en ${HostName}:9100. Revisa que esté encendida, en la misma red y con la IP correcta." 'WARN'
+    }
+}
+
+function Install-NetworkPrinter {
+    param([string]$Name, [string]$HostName, [string]$Driver, [bool]$SetDefault, [bool]$TestPage)
+    try {
+        $port = 9100
+        Write-Log "Comprobando ${HostName}:$port..."
+        if (Test-PrinterSocket -HostName $HostName -Port $port) {
+            Write-Log "${HostName}:$port responde." 'OK'
+        } else {
+            Write-Log "${HostName}:$port no responde (¿apagada?). Se configura igual en Windows." 'WARN'
+        }
+
+        $portName = "IP_$HostName"
+        if (Get-PrinterPort -Name $portName -ErrorAction SilentlyContinue) {
+            Write-Log "El puerto $portName ya existe; se reutiliza."
+        } else {
+            Add-PrinterPort -Name $portName -PrinterHostAddress $HostName -PortNumber $port -ErrorAction Stop
+            Write-Log "Puerto TCP/IP $portName creado (RAW, $port)." 'OK'
+        }
+
+        if (Get-Printer -Name $Name -ErrorAction SilentlyContinue) {
+            Write-Log "La impresora «$Name» ya existía: se actualizan su puerto y su controlador." 'WARN'
+            Set-Printer -Name $Name -PortName $portName -DriverName $Driver -ErrorAction Stop
+        } else {
+            Add-Printer -Name $Name -PortName $portName -DriverName $Driver -ErrorAction Stop
+        }
+        Write-Log "Impresora «$Name» registrada con el controlador «$Driver»." 'OK'
+
+        if ($SetDefault) {
+            try {
+                (New-Object -ComObject WScript.Network).SetDefaultPrinter($Name)
+                Write-Log "«$Name» es ahora la impresora predeterminada." 'OK'
+            } catch {
+                Write-Log "No se pudo dejar como predeterminada: $($_.Exception.Message)" 'WARN'
+            }
+        }
+        if ($TestPage) {
+            try {
+                # WQL escapa la comilla simple y la barra invertida con una barra invertida.
+                $wql = $Name.Replace('\', '\\').Replace("'", "\'")
+                $cim = Get-CimInstance -ClassName Win32_Printer -Filter "Name = '$wql'" -ErrorAction Stop
+                $null = Invoke-CimMethod -InputObject $cim -MethodName PrintTestPage -ErrorAction Stop
+                Write-Log 'Página de prueba enviada a la cola de impresión.' 'OK'
+            } catch {
+                Write-Log "No se pudo enviar la página de prueba: $($_.Exception.Message)" 'WARN'
+            }
+        }
+        Send-PrinterResult "✔ «$Name» quedó instalada en ${HostName}:$port." 'OK'
+    } catch {
+        Send-PrinterResult "✖ No se pudo instalar: $($_.Exception.Message)" 'ERROR'
+        throw
+    }
+}
+
 function Get-HardwareInfo {
     Write-Log 'Leyendo el hardware del equipo...'
     $cpu = Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object -First 1
@@ -388,7 +586,8 @@ function Backup-UserProfile {
 
 $workerFunctions = @(
     'Write-Log', 'Send-Data', 'Invoke-Native', 'Get-Column', 'ConvertFrom-WingetTable',
-    'Find-PendingUpgrades', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
+    'Find-PendingUpgrades', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Find-WindowsUpdates', 'Install-WindowsUpdates', 'Test-PrinterSocket', 'Send-PrinterResult',
+    'Get-PrinterDriverNames', 'Test-PrinterConnection', 'Install-NetworkPrinter', 'Get-HardwareInfo', 'Restart-ExplorerShell', 'Reset-Network',
     'Restart-ServiceChecked', 'Restart-Spooler', 'Restart-WindowsUpdate', 'Restart-AudioServices',
     'Invoke-FullMaintenance', 'Get-ProfileFolders', 'Backup-UserProfile'
 )
@@ -438,12 +637,12 @@ function New-InfoCardXaml {
 }
 
 $serviceCards = @(
-    New-ActionCardXaml 'btnExplorer' '&#xE8B7;' '3498DB' 'Explorador de Windows' 'Reinicia el shell para refrescar la barra de tareas, el escritorio y el explorador de archivos.' 'Reiniciar'
-    New-ActionCardXaml 'btnNetwork' '&#xE701;' '1ABC9C' 'Red y Wi-Fi' 'Reinicia los adaptadores conectados, vacía la caché DNS y pide una IP nueva por DHCP.' 'Restablecer'
-    New-ActionCardXaml 'btnSpooler' '&#xE749;' 'F39C12' 'Cola de impresión' 'Reinicia el servicio Spooler para desbloquear trabajos de impresión atascados.' 'Reiniciar'
-    New-ActionCardXaml 'btnAudio' '&#xE767;' '9B59B6' 'Servicios de audio' 'Reinicia Audiosrv y AudioEndpointBuilder si el sonido se corta o no aparecen salidas.' 'Reiniciar'
-    New-ActionCardXaml 'btnUpdate' '&#xE895;' '2ECC71' 'Windows Update' 'Reinicia el servicio de actualizaciones cuando una descarga o un análisis se queda colgado.' 'Reiniciar'
-    New-ActionCardXaml 'btnAll' '&#xE90F;' 'FF7A00' 'Mantenimiento completo' 'Ejecuta todo lo anterior en secuencia. Si un paso falla, sigue con el siguiente.' 'Ejecutar todo' 'AccentButton'
+    New-ActionCardXaml 'btnExplorer' '&#xE8B7;' '8EC5F0' 'Explorador de Windows' 'Reinicia el shell para refrescar la barra de tareas, el escritorio y el explorador de archivos.' 'Reiniciar'
+    New-ActionCardXaml 'btnNetwork' '&#xE701;' '8EDCC8' 'Red y Wi-Fi' 'Reinicia los adaptadores conectados, vacía la caché DNS y pide una IP nueva por DHCP.' 'Restablecer'
+    New-ActionCardXaml 'btnSpooler' '&#xE749;' 'F5D58A' 'Cola de impresión' 'Reinicia el servicio Spooler para desbloquear trabajos de impresión atascados.' 'Reiniciar'
+    New-ActionCardXaml 'btnAudio' '&#xE767;' 'C9A9E8' 'Servicios de audio' 'Reinicia Audiosrv y AudioEndpointBuilder si el sonido se corta o no aparecen salidas.' 'Reiniciar'
+    New-ActionCardXaml 'btnUpdate' '&#xE895;' '9FDFBF' 'Windows Update' 'Reinicia el servicio de actualizaciones cuando una descarga o un análisis se queda colgado.' 'Reiniciar'
+    New-ActionCardXaml 'btnAll' '&#xE90F;' 'A5B4FC' 'Mantenimiento completo' 'Ejecuta todo lo anterior en secuencia. Si un paso falla, sigue con el siguiente.' 'Ejecutar todo' 'AccentButton'
 ) -join "`n"
 
 $infoCards = @(
@@ -481,22 +680,92 @@ $xaml = @"
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="overlay" Property="Opacity" Value="1"/></Trigger>
               <Trigger Property="IsPressed" Value="True"><Setter TargetName="overlay" Property="Background" Value="#30000000"/></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="bd" Property="BorderBrush" Value="#FF9433"/></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="bd" Property="BorderBrush" Value="#C7D2FE"/></Trigger>
               <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="GridHeader" TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#11121A"/>
+      <Setter Property="Foreground" Value="#7E849E"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="BorderBrush" Value="#22253A"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+    </Style>
+    <Style x:Key="GridCell" TargetType="DataGridCell">
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="DataGridCell">
+            <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+              <ContentPresenter VerticalAlignment="Center"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="#33A5B4FC"/>
+          <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#11121A"/>
+      <Setter Property="Foreground" Value="#C5C9DB"/>
+      <Setter Property="CaretBrush" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#2A2E45"/>
+      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#C5C9DB"/>
+      <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+    <Style x:Key="PickList" TargetType="ListBox">
+      <Setter Property="Background" Value="#11121A"/>
+      <Setter Property="Foreground" Value="#C5C9DB"/>
+      <Setter Property="BorderBrush" Value="#2A2E45"/>
+      <Setter Property="ItemContainerStyle">
+        <Setter.Value>
+          <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                  <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter/>
+                  </Border>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#1A1B28"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="#33A5B4FC"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+              </Trigger>
+            </Style.Triggers>
+          </Style>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}"/>
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
-      <Setter Property="Background" Value="#FF7A00"/>
-      <Setter Property="BorderBrush" Value="#FF7A00"/>
-      <Setter Property="Foreground" Value="#14100A"/>
+      <Setter Property="Background" Value="#A5B4FC"/>
+      <Setter Property="BorderBrush" Value="#A5B4FC"/>
+      <Setter Property="Foreground" Value="#12131F"/>
     </Style>
     <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
-      <Setter Property="Background" Value="#C0392B"/>
-      <Setter Property="BorderBrush" Value="#C0392B"/>
+      <Setter Property="Background" Value="#F2A0A8"/>
+      <Setter Property="BorderBrush" Value="#F2A0A8"/>
+      <Setter Property="Foreground" Value="#2A1215"/>
     </Style>
     <Style x:Key="GhostButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
       <Setter Property="Background" Value="Transparent"/>
@@ -528,7 +797,7 @@ $xaml = @"
     <Style x:Key="Eyebrow" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
-      <Setter Property="Foreground" Value="#FF9433"/>
+      <Setter Property="Foreground" Value="#C7D2FE"/>
       <Setter Property="Margin" Value="0,0,0,8"/>
     </Style>
     <Style x:Key="InfoMain" TargetType="TextBlock">
@@ -605,7 +874,7 @@ $xaml = @"
           <ControlTemplate TargetType="TabItem">
             <Grid Background="Transparent" Cursor="Hand" Margin="0,0,8,0">
               <ContentPresenter ContentSource="Header" Margin="12,9,12,11"/>
-              <Border x:Name="line" Height="2" VerticalAlignment="Bottom" Background="#FF7A00" CornerRadius="1" Visibility="Hidden"/>
+              <Border x:Name="line" Height="2" VerticalAlignment="Bottom" Background="#A5B4FC" CornerRadius="1" Visibility="Hidden"/>
             </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="#FFFFFF"/></Trigger>
@@ -629,12 +898,12 @@ $xaml = @"
     </Grid.RowDefinitions>
 
     <DockPanel Grid.Row="0" Margin="24,12,24,8">
-      <Border DockPanel.Dock="Right" x:Name="adminBadge" CornerRadius="12" Padding="12,5" VerticalAlignment="Center" Background="#262ECC71">
-        <TextBlock x:Name="adminText" FontSize="12" FontWeight="SemiBold" Foreground="#2ECC71"/>
+      <Border DockPanel.Dock="Right" x:Name="adminBadge" CornerRadius="12" Padding="12,5" VerticalAlignment="Center" Background="#269FDFBF">
+        <TextBlock x:Name="adminText" FontSize="12" FontWeight="SemiBold" Foreground="#9FDFBF"/>
       </Border>
       <StackPanel Orientation="Horizontal">
-        <Border Width="34" Height="34" CornerRadius="9" Background="#FF7A00">
-          <TextBlock Text="OL" FontSize="14" FontWeight="Bold" Foreground="#14100A" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Border Width="34" Height="34" CornerRadius="9" Background="#A5B4FC">
+          <TextBlock Text="OL" FontSize="14" FontWeight="Bold" Foreground="#12131F" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
         <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
           <TextBlock Text="Utilidades de Windows" FontSize="18" FontWeight="SemiBold" Foreground="#FFFFFF"/>
@@ -692,38 +961,8 @@ $infoCards
           <DataGrid x:Name="upgGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
                     GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#22253A" CanUserAddRows="False"
                     SelectionMode="Single" RowHeight="30" Background="#171824" RowBackground="#171824"
-                    AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1">
-            <DataGrid.ColumnHeaderStyle>
-              <Style TargetType="DataGridColumnHeader">
-                <Setter Property="Background" Value="#11121A"/>
-                <Setter Property="Foreground" Value="#7E849E"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Padding" Value="10,8"/>
-                <Setter Property="BorderBrush" Value="#22253A"/>
-                <Setter Property="BorderThickness" Value="0,0,0,1"/>
-              </Style>
-            </DataGrid.ColumnHeaderStyle>
-            <DataGrid.CellStyle>
-              <Style TargetType="DataGridCell">
-                <Setter Property="Padding" Value="10,0"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Template">
-                  <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                      <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter VerticalAlignment="Center"/>
-                      </Border>
-                    </ControlTemplate>
-                  </Setter.Value>
-                </Setter>
-                <Style.Triggers>
-                  <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#33FF7A00"/>
-                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                  </Trigger>
-                </Style.Triggers>
-              </Style>
-            </DataGrid.CellStyle>
+                    AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1"
+                    ColumnHeaderStyle="{StaticResource GridHeader}" CellStyle="{StaticResource GridCell}">
             <DataGrid.Columns>
               <DataGridTemplateColumn Header="" Width="44">
                 <DataGridTemplateColumn.CellTemplate>
@@ -741,6 +980,75 @@ $infoCards
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Windows Update">
+        <DockPanel Margin="0,0,12,12">
+          <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="btnWinScan" Content="Buscar actualizaciones" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+              <Button x:Name="btnWinInstall" Content="Instalar seleccionadas" Style="{StaticResource AccentButton}"/>
+            </StackPanel>
+            <StackPanel>
+              <TextBlock Text="Actualizaciones de Windows" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Busca e instala las actualizaciones del sistema, Defender y controladores con la API de Windows Update, de a una. Una acumulativa puede tardar de 10 a 30 min y no tiene límite de tiempo. No reinicia el equipo por su cuenta." Style="{StaticResource SectionText}"/>
+            </StackPanel>
+          </DockPanel>
+          <TextBlock x:Name="winReboot" DockPanel.Dock="Top" Margin="0,0,0,6" Visibility="Collapsed" Foreground="#F5D58A" FontWeight="SemiBold"
+                     Text="⚠ Hay un reinicio pendiente. Reinicia el equipo para terminar de aplicar las actualizaciones."/>
+          <TextBlock x:Name="winSummary" DockPanel.Dock="Top" Margin="0,0,0,10" Text="Usa «Buscar actualizaciones» para ver qué actualizaciones de Windows hay pendientes (puede tardar unos minutos)."/>
+          <DataGrid x:Name="winGrid" AutoGenerateColumns="False" HeadersVisibility="Column"
+                    GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#22253A" CanUserAddRows="False"
+                    SelectionMode="Single" RowHeight="30" Background="#171824" RowBackground="#171824"
+                    AlternatingRowBackground="#1A1B28" Foreground="#C5C9DB" BorderBrush="#22253A" BorderThickness="1"
+                    ColumnHeaderStyle="{StaticResource GridHeader}" CellStyle="{StaticResource GridCell}">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="" Width="44">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <CheckBox IsChecked="{Binding Selected, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Actualización" Binding="{Binding Title}" IsReadOnly="True" Width="3.5*"/>
+              <DataGridTextColumn Header="KB" Binding="{Binding Kb}" IsReadOnly="True" Width="0.9*"/>
+              <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" IsReadOnly="True" Width="0.9*"/>
+              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" Width="1.5*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Impresoras">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel MaxWidth="680" HorizontalAlignment="Left">
+            <StackPanel Margin="0,0,12,14">
+              <TextBlock Text="Impresora de red (TCP/IP)" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Crea el puerto TCP/IP estándar (RAW, 9100) y registra la impresora con un controlador ya instalado en Windows. Instala antes el controlador del fabricante (Epson, HP, etc.)." Style="{StaticResource SectionText}"/>
+            </StackPanel>
+            <Border Style="{StaticResource Card}" Margin="0,0,12,12">
+              <StackPanel>
+                <TextBlock Text="NOMBRE DE LA IMPRESORA" Style="{StaticResource Eyebrow}"/>
+                <TextBox x:Name="prnName" Text="Impresora Oficina - Orange" Margin="0,0,0,14"/>
+                <TextBlock Text="IP O NOMBRE DE HOST" Style="{StaticResource Eyebrow}"/>
+                <DockPanel Margin="0,0,0,14">
+                  <Button x:Name="btnPrnTest" DockPanel.Dock="Right" Content="Probar puerto 9100" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
+                  <TextBox x:Name="prnIp" Text="192.168.8.1" FontFamily="Consolas"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,6">
+                  <Button x:Name="btnPrnReload" DockPanel.Dock="Right" Content="Recargar lista" Style="{StaticResource GhostButton}"/>
+                  <TextBlock Text="CONTROLADOR" Style="{StaticResource Eyebrow}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <ListBox x:Name="prnDrivers" Style="{StaticResource PickList}" Height="170" Margin="0,0,0,14"/>
+                <CheckBox x:Name="prnDefault" Content="Establecer como impresora predeterminada" IsChecked="True"/>
+                <CheckBox x:Name="prnTestPage" Content="Imprimir una página de prueba al terminar" IsChecked="True"/>
+                <TextBlock x:Name="prnResult" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#7E849E"
+                           Text="Elige un controlador, revisa la IP y pulsa «Instalar impresora»."/>
+              </StackPanel>
+            </Border>
+            <Button x:Name="btnPrnInstall" Content="Instalar impresora" Style="{StaticResource AccentButton}" HorizontalAlignment="Left"/>
+          </StackPanel>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Limpieza de perfil">
@@ -781,7 +1089,7 @@ $infoCards
           </DockPanel>
         </DockPanel>
         <ProgressBar x:Name="busyBar" DockPanel.Dock="Top" Height="2" Margin="20,8,20,0" IsIndeterminate="True"
-                     Visibility="Hidden" Foreground="#FF7A00" Background="Transparent" BorderThickness="0"/>
+                     Visibility="Hidden" Foreground="#A5B4FC" Background="Transparent" BorderThickness="0"/>
         <RichTextBox x:Name="logBox" IsReadOnly="True" Background="Transparent" BorderThickness="0" Foreground="#C5C9DB"
                      FontFamily="Cascadia Mono, Consolas" FontSize="12" Padding="14,4" VerticalScrollBarVisibility="Auto">
           <FlowDocument PagePadding="0"/>
@@ -804,7 +1112,9 @@ $ui = @{}
 foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText', 'busyBar', 'logBox', 'btnCopyLog', 'btnClearLog',
         'btnToggleLog', 'consoleRow', 'consoleSplitter', 'servicesGrid', 'hwGrid',
         'btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll', 'btnRefreshHw',
-        'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget')) {
+        'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget',
+        'btnWinScan', 'btnWinInstall', 'winSummary', 'winReboot', 'winGrid',
+        'prnName', 'prnIp', 'prnDrivers', 'prnDefault', 'prnTestPage', 'prnResult', 'btnPrnTest', 'btnPrnReload', 'btnPrnInstall')) {
     $ui[$name] = $window.FindName($name)
 }
 $hwKeys = @('Cpu', 'Gpu', 'Ram', 'Disk', 'Os', 'Pc')
@@ -813,11 +1123,12 @@ foreach ($k in $hwKeys) {
     $ui["hw${k}Detail"] = $window.FindName("hw${k}Detail")
 }
 $actionButtons = @('btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll',
-    'btnRefreshHw', 'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'btnClean') | ForEach-Object { $ui[$_] }
+    'btnRefreshHw', 'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'btnWinScan', 'btnWinInstall',
+    'btnPrnTest', 'btnPrnReload', 'btnPrnInstall', 'btnClean') | ForEach-Object { $ui[$_] }
 
 $brushConverter = New-Object Windows.Media.BrushConverter
 $logBrushes = @{}
-foreach ($pair in @(@('INFO', '#C5C9DB'), @('OK', '#2ECC71'), @('WARN', '#F39C12'), @('ERROR', '#E74C3C'), @('STEP', '#FF9433'), @('TIME', '#4E5369'))) {
+foreach ($pair in @(@('INFO', '#C5C9DB'), @('OK', '#9FDFBF'), @('WARN', '#F5D58A'), @('ERROR', '#F2A0A8'), @('STEP', '#C7D2FE'), @('TIME', '#4E5369'))) {
     $logBrushes[$pair[0]] = $brushConverter.ConvertFromString($pair[1])
 }
 
@@ -826,7 +1137,7 @@ if ($isAdmin) {
 } else {
     $ui.adminText.Text = 'Sin permisos de administrador'
     $ui.adminText.Foreground = $logBrushes.WARN
-    $ui.adminBadge.Background = $brushConverter.ConvertFromString('#26F39C12')
+    $ui.adminBadge.Background = $brushConverter.ConvertFromString('#26F5D58A')
 }
 $ui.hostText.Text = "$env:COMPUTERNAME · $env:USERNAME"
 $ui.cleanTarget.Text = "Destino: $((Get-ProfileFolders).Backup)"
@@ -897,6 +1208,30 @@ function Receive-Data {
                 })
             $ui.upgGrid.ItemsSource = $script:upgRows
             $ui.upgSummary.Text = if ($script:upgRows.Count) { "$($script:upgRows.Count) aplicación(es) con versión nueva. Desmarca las que no quieras y pulsa «Actualizar seleccionadas»." } else { 'Todo al día: winget no encontró actualizaciones.' }
+        }
+        'winUpdates' {
+            # Las que piden licencia o interacción salen sin marcar y avisadas.
+            $script:winRows = @($Item.Value | ForEach-Object {
+                    [pscustomobject]@{
+                        Selected = -not $_.NeedsUser; Id = $_.Id; Title = $_.Title; Kb = $_.Kb; Type = $_.Type
+                        Status   = if ($_.NeedsUser) { 'Requiere interacción' } else { 'Pendiente' }
+                    }
+                })
+            $ui.winGrid.ItemsSource = $script:winRows
+            $ui.winSummary.Text = if ($script:winRows.Count) { "$($script:winRows.Count) actualización(es) de Windows. Desmarca las que no quieras y pulsa «Instalar seleccionadas»." } else { 'Windows está al día.' }
+        }
+        'winUpdateStatus' {
+            $row = $script:winRows | Where-Object { $_.Id -eq $Item.Value.Id } | Select-Object -First 1
+            if ($row) {
+                $row.Status = $Item.Value.Status
+                $ui.winGrid.Items.Refresh()
+            }
+        }
+        'winReboot' { $ui.winReboot.Visibility = 'Visible' }
+        'printerDrivers' { $ui.prnDrivers.ItemsSource = @($Item.Value) }
+        'printerResult' {
+            $ui.prnResult.Text = $Item.Value.Text
+            $ui.prnResult.Foreground = $logBrushes[$Item.Value.Kind]
         }
         'upgradeStatus' {
             $row = $script:upgRows | Where-Object { $_.Id -eq $Item.Value.Id } | Select-Object -First 1
@@ -988,6 +1323,73 @@ $ui.btnInstallSelected.Add_Click({
         foreach ($row in $script:upgRows) { if ($row.Selected) { $row.Status = 'En cola' } }
         $ui.upgGrid.Items.Refresh()
         Start-Task "Actualizar $($selected.Count) aplicación(es)" 'Install-SelectedUpgrades' @{ Apps = $selected }
+    })
+
+$script:driversLoaded = $false
+
+# La lista de controladores se carga al abrir la pestaña por primera vez. SelectionChanged
+# burbujea desde controles internos (la lista de controladores), así que se filtra por el origen.
+$ui.tabs.Add_SelectionChanged({
+        param($s, $e)
+        if ($e.OriginalSource -ne $ui.tabs) { return }
+        if ($ui.tabs.SelectedItem.Header -eq 'Impresoras' -and -not $script:driversLoaded -and -not $script:task) {
+            $script:driversLoaded = $true
+            Start-Task 'Leer controladores de impresora' 'Get-PrinterDriverNames'
+        }
+    })
+
+function Get-PrinterFormError {
+    param([string]$PrinterName, [string]$HostName)
+    if (-not $PrinterName) { return 'Escribe un nombre para la impresora.' }
+    if ($PrinterName -match '[\\,!]') { return 'El nombre no puede llevar \ , ni !.' }
+    if (-not $HostName) { return 'Escribe la IP o el nombre de host de la impresora.' }
+    if ($HostName -notmatch '^[A-Za-z0-9]([A-Za-z0-9.\-]{0,251}[A-Za-z0-9])?$') { return 'La IP o el host solo puede llevar letras, números, puntos y guiones.' }
+    if ($HostName -match '^\d+(\.\d+){3}$' -and -not [System.Net.IPAddress]::TryParse($HostName, [ref]$null)) { return "«$HostName» no es una dirección IP válida." }
+    return $null
+}
+
+function Set-PrinterFormMessage {
+    param([string]$Text)
+    $ui.prnResult.Text = $Text
+    $ui.prnResult.Foreground = $logBrushes.WARN
+    Write-Log $Text 'WARN'
+}
+
+$ui.btnPrnReload.Add_Click({ Start-Task 'Leer controladores de impresora' 'Get-PrinterDriverNames' })
+
+$ui.btnPrnTest.Add_Click({
+        $hostName = $ui.prnIp.Text.Trim()
+        $problem = Get-PrinterFormError 'x' $hostName
+        if ($problem) { Set-PrinterFormMessage $problem; return }
+        Start-Task "Probar $hostName`:9100" 'Test-PrinterConnection' @{ HostName = $hostName }
+    })
+
+$ui.btnPrnInstall.Add_Click({
+        $printerName = $ui.prnName.Text.Trim()
+        $hostName = $ui.prnIp.Text.Trim()
+        $problem = Get-PrinterFormError $printerName $hostName
+        if (-not $problem -and -not $ui.prnDrivers.SelectedItem) { $problem = 'Elige un controlador de la lista.' }
+        if ($problem) { Set-PrinterFormMessage $problem; return }
+        Start-Task "Instalar impresora $printerName" 'Install-NetworkPrinter' @{
+            Name       = $printerName
+            HostName   = $hostName
+            Driver     = [string]$ui.prnDrivers.SelectedItem
+            SetDefault = [bool]$ui.prnDefault.IsChecked
+            TestPage   = [bool]$ui.prnTestPage.IsChecked
+        }
+    })
+
+$ui.btnWinScan.Add_Click({ Start-Task 'Buscar actualizaciones de Windows' 'Find-WindowsUpdates' })
+
+$ui.btnWinInstall.Add_Click({
+        $ids = [string[]]@($script:winRows | Where-Object { $_.Selected } | ForEach-Object { $_.Id })
+        if ($ids.Count -eq 0) {
+            Write-Log 'No hay actualizaciones de Windows marcadas. Usa «Buscar actualizaciones» y marca las que quieras instalar.' 'WARN'
+            return
+        }
+        foreach ($row in $script:winRows) { if ($row.Selected) { $row.Status = 'En cola' } }
+        $ui.winGrid.Items.Refresh()
+        Start-Task "Instalar $($ids.Count) actualización(es) de Windows" 'Install-WindowsUpdates' @{ Ids = $ids }
     })
 
 $ui.btnRunUpdater.Add_Click({

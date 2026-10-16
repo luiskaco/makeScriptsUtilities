@@ -84,11 +84,13 @@ Automatiza la detección y actualización de todas las aplicaciones instaladas m
 
 ### 2. PanelUtilidades
 
-Ventana nativa de Windows (PowerShell + WPF) con cuatro pestañas y una consola de log en vivo. Reemplaza al antiguo panel web (`web/` + Node), que se eliminó.
+Ventana nativa de Windows (PowerShell + WPF) con seis pestañas y una consola de log en vivo. Reemplaza al antiguo panel web (`web/` + Node), que se eliminó.
 
 - **Servicios:** reinicia el Explorador, los adaptadores de red (más `flushdns` y `ipconfig /renew`), la cola de impresión, los servicios de audio y Windows Update. "Mantenimiento completo" corre todo en secuencia y sigue aunque falle un paso.
 - **Hardware:** CPU, GPU, RAM, disco del sistema, SO y tiempo encendido.
 - **Actualizaciones:** lista lo que `winget` puede actualizar, con una casilla por app (todas marcadas de entrada) y una columna de estado. "Actualizar seleccionadas" instala las marcadas dentro del panel, con límite de 5 min por app; "Actualizar todo" abre `ActualizarApps.exe` en su propia ventana.
+- **Windows Update:** busca con la API COM de Windows Update (`Microsoft.Update.Session`, sin instalar módulos) y muestra las actualizaciones del sistema, Defender y controladores con casilla y estado. "Instalar seleccionadas" las descarga e instala de a una, sin límite de tiempo (una acumulativa puede tardar de 10 a 30 min). Las que piden licencia o interacción salen sin marcar y se instalan desde Configuración. No reinicia el equipo: avisa si hace falta.
+- **Impresoras:** configura una impresora de red por IP (prellenada con `192.168.8.1`, editable): crea el puerto TCP/IP estándar (RAW, 9100) y registra la impresora con un controlador ya instalado en Windows (el del fabricante hay que instalarlo antes). Trae "Probar puerto 9100" y opciones para dejarla predeterminada e imprimir una página de prueba. Si la impresora ya existe, actualiza su puerto y controlador. Recupera la función que tenía `AsistenciaOrange` (commit `cde6fc7`).
 - **Limpieza de perfil:** mueve Escritorio, Descargas y Documentos a `Escritorio\Respaldo_Usuario` con `robocopy` y restablece el fondo de pantalla. Pide confirmación antes de empezar.
 
 Las tareas corren en un runspace aparte, así que la ventana no se congela mientras trabajan.

@@ -260,13 +260,17 @@ function Find-WindowsUpdates {
     $list = New-Object System.Collections.Generic.List[object]
     foreach ($u in $found.Updates) {
         $kb = @($u.KBArticleIDs | ForEach-Object { "KB$_" }) -join ', '
-        $needsUser = [bool]$u.InstallationBehavior.CanRequestUserInput -or -not $u.EulaAccepted
         $list.Add([pscustomobject]@{
                 Id        = $u.Identity.UpdateID
                 Title     = $u.Title
                 Kb        = $kb
                 Type      = if ($u.Type -eq 2) { 'Controlador' } else { 'Software' }
-                NeedsUser = $needsUser
+                # Son dos casos distintos: con la licencia sin aceptar no hay instalación
+                # silenciosa posible; CanRequestUserInput solo dice que el paquete *podría*
+                # pedir algo en pantalla (los controladores de Lenovo lo traen en True con la
+                # licencia ya aceptada y sin ningún texto que mostrar).
+                NeedsEula = -not $u.EulaAccepted
+                MayPrompt = [bool]$u.InstallationBehavior.CanRequestUserInput
             })
     }
     Send-Data 'winUpdates' $list.ToArray()
@@ -282,7 +286,9 @@ function Install-WindowsUpdates {
     # Descarga e instala de a una para informar el estado de cada fila; una que falla no
     # corta a las demás. Se vuelve a buscar porque los objetos COM de la búsqueda anterior
     # no viajan a este runspace. No se fuerza ningún reinicio: solo se avisa.
-    param([string[]]$Ids)
+    # QuietIds: las que Windows marca como "pueden pedir confirmación" y el usuario aceptó
+    # instalar en modo silencioso; sin esa confirmación se omiten.
+    param([string[]]$Ids, [string[]]$QuietIds = @())
 
     $session = New-Object -ComObject Microsoft.Update.Session
     $found = $session.CreateUpdateSearcher().Search('IsInstalled=0 and IsHidden=0')
@@ -300,10 +306,17 @@ function Install-WindowsUpdates {
             continue
         }
         Write-Log "[$index/$($Ids.Count)] $($u.Title)" 'STEP'
-        if ($u.InstallationBehavior.CanRequestUserInput -or -not $u.EulaAccepted) {
+        $quiet = $id -in $QuietIds
+        if (-not $u.EulaAccepted) {
             $skipped++
-            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Requiere interacción' }
-            Write-Log 'Pide aceptar una licencia o responder en pantalla; instálala desde Configuración de Windows.' 'WARN'
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Requiere licencia' }
+            Write-Log 'Pide aceptar una licencia, y eso no se puede hacer en modo silencioso: instálala desde Configuración de Windows (botón «Abrir Windows Update»).' 'WARN'
+            continue
+        }
+        if ($u.InstallationBehavior.CanRequestUserInput -and -not $quiet) {
+            $skipped++
+            Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Puede pedir confirmación' }
+            Write-Log 'Windows la marca como "puede pedir confirmación"; márcala otra vez e instálala para confirmar la instalación silenciosa.' 'WARN'
             continue
         }
         try {
@@ -314,12 +327,21 @@ function Install-WindowsUpdates {
                 $downloader = $session.CreateUpdateDownloader()
                 $downloader.Updates = $coll
                 $dl = $downloader.Download()
-                if ($dl.ResultCode -ne 2) { throw "la descarga terminó con código $($dl.ResultCode)" }
+                if ($dl.ResultCode -ne 2) {
+                    $hr = $dl.GetUpdateResult(0).HResult
+                    # Sin permisos de administrador la descarga también se rechaza, con
+                    # 0x80070005 (acceso denegado) o 0x80240044 (WU_E_NON_ADMIN).
+                    if ($hr -eq -2147024891 -or $hr -eq -2145124284) { throw 'acceso denegado: abre el panel como administrador' }
+                    throw ('la descarga terminó con resultado {0}, HRESULT 0x{1:X8}' -f [int]$dl.ResultCode, $hr)
+                }
             }
             Send-Data 'winUpdateStatus' @{ Id = $id; Status = 'Instalando…' }
             $installer = $session.CreateUpdateInstaller()
             $installer.Updates = $coll
             $installer.AllowSourcePrompts = $false
+            # ForceQuiet: si el paquete necesita una respuesta del usuario, falla en vez de
+            # quedarse esperando una ventana que nadie ve.
+            if ($quiet) { $installer.ForceQuiet = $true; Write-Log 'Instalación silenciosa (sin ventanas).' 'FILE' }
             $r = $installer.Install()
             if ($r.RebootRequired) { $reboot = $true }
             switch ([int]$r.ResultCode) {
@@ -1308,6 +1330,7 @@ $infoCards
         <DockPanel Margin="0,0,12,12">
           <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="btnWinSettings" Content="Abrir Windows Update" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" ToolTip="Abre Configuración de Windows, donde se aceptan licencias y se instalan las que piden interacción"/>
               <Button x:Name="btnWinScan" Content="Buscar actualizaciones" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
               <Button x:Name="btnWinInstall" Content="Instalar seleccionadas" Style="{StaticResource AccentButton}"/>
             </StackPanel>
@@ -1331,7 +1354,7 @@ $infoCards
               <DataGridTextColumn Header="Actualización" Binding="{Binding Title}" IsReadOnly="True" Width="3.5*"/>
               <DataGridTextColumn Header="KB" Binding="{Binding Kb}" IsReadOnly="True" Width="0.9*"/>
               <DataGridTextColumn Header="Tipo" Binding="{Binding Type}" IsReadOnly="True" Width="0.9*"/>
-              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" Width="1.5*"/>
+              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" MinWidth="190" Width="1.5*"/>
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
@@ -1503,7 +1526,7 @@ foreach ($name in @('adminBadge', 'adminText', 'hostText', 'tabs', 'statusText',
         'btnToggleLog', 'consoleRow', 'consoleSplitter', 'servicesGrid', 'hwGrid',
         'btnExplorer', 'btnNetwork', 'btnSpooler', 'btnAudio', 'btnUpdate', 'btnAll', 'btnRefreshHw',
         'btnScan', 'btnRunUpdater', 'btnInstallSelected', 'upgSummary', 'upgGrid', 'btnClean', 'cleanTarget',
-        'btnWinScan', 'btnWinInstall', 'winSummary', 'winReboot', 'winGrid',
+        'btnWinScan', 'btnWinInstall', 'btnWinSettings', 'winSummary', 'winReboot', 'winGrid',
         'prnName', 'prnIp', 'prnDrivers', 'prnDefault', 'prnTestPage', 'prnResult', 'btnPrnTest', 'btnPrnReload', 'btnPrnInstall',
         'prnList', 'btnPrnRefresh', 'btnPrnDefault', 'btnPrnTestPage', 'btnPrnRemove', 'btnPrnClearQueue',
         'btnNetDiag', 'netGrid', 'netSummary', 'btnDnsApply', 'btnCopyReport')) {
@@ -1624,11 +1647,13 @@ function Receive-Data {
             $ui.upgSummary.Text = if ($script:upgRows.Count) { "$($script:upgRows.Count) aplicación(es) con versión nueva. Desmarca las que no quieras y pulsa «Actualizar seleccionadas»." } else { 'Todo al día: winget no encontró actualizaciones.' }
         }
         'winUpdates' {
-            # Las que piden licencia o interacción salen sin marcar y avisadas.
+            # Las que piden licencia o pueden pedir confirmación salen sin marcar y avisadas:
+            # las segundas se pueden marcar y el panel pregunta antes de instalarlas.
             $script:winRows = @($Item.Value | ForEach-Object {
                     [pscustomobject]@{
-                        Selected = -not $_.NeedsUser; Id = $_.Id; Title = $_.Title; Kb = $_.Kb; Type = $_.Type
-                        Status   = if ($_.NeedsUser) { 'Requiere interacción' } else { 'Pendiente' }
+                        Selected  = -not ($_.NeedsEula -or $_.MayPrompt); Id = $_.Id; Title = $_.Title; Kb = $_.Kb; Type = $_.Type
+                        NeedsEula = $_.NeedsEula; MayPrompt = $_.MayPrompt
+                        Status    = if ($_.NeedsEula) { 'Requiere licencia' } elseif ($_.MayPrompt) { 'Puede pedir confirmación' } else { 'Pendiente' }
                     }
                 })
             $ui.winGrid.ItemsSource = $script:winRows
@@ -1879,14 +1904,41 @@ $ui.btnPrnInstall.Add_Click({
 $ui.btnWinScan.Add_Click({ Start-Task 'Buscar actualizaciones de Windows' 'Find-WindowsUpdates' })
 
 $ui.btnWinInstall.Add_Click({
-        $ids = [string[]]@($script:winRows | Where-Object { $_.Selected } | ForEach-Object { $_.Id })
-        if ($ids.Count -eq 0) {
+        $selected = @($script:winRows | Where-Object { $_.Selected })
+        if ($selected.Count -eq 0) {
             Write-Log 'No hay actualizaciones de Windows marcadas. Usa «Buscar actualizaciones» y marca las que quieras instalar.' 'WARN'
             return
         }
-        foreach ($row in $script:winRows) { if ($row.Selected) { $row.Status = 'En cola' } }
+
+        # Las que Windows marca como "pueden pedir confirmación" no tienen ninguna ventana
+        # que mostrar antes de instalar: lo que hay que decidir es instalarlas en modo
+        # silencioso, y eso se pregunta aquí.
+        $prompting = @($selected | Where-Object { $_.MayPrompt -and -not $_.NeedsEula })
+        $quietIds = [string[]]@()
+        if ($prompting.Count -gt 0) {
+            $list = ($prompting | ForEach-Object { "  •  $($_.Title)" }) -join "`n"
+            $answer = [Windows.MessageBox]::Show($window,
+                "Windows marca estas actualizaciones como que podrían pedir una confirmación durante la instalación:`n`n$list`n`nNo hay ninguna ventana que contestar: el panel las instala en modo silencioso, sin pantallas. Si alguna no se puede instalar así, fallará y quedará indicado en su fila.`n`nSi son controladores, pueden pedir reiniciar el equipo al terminar (el panel no lo reinicia). ¿Instalarlas?",
+                'Instalar en modo silencioso', 'YesNo', 'Question', 'No')
+            if ($answer -eq 'Yes') {
+                $quietIds = [string[]]@($prompting | ForEach-Object { $_.Id })
+            } else {
+                foreach ($row in $prompting) { $row.Selected = $false }
+                $selected = @($selected | Where-Object { $_.Selected })
+                $ui.winGrid.Items.Refresh()
+                if ($selected.Count -eq 0) { return }
+            }
+        }
+
+        $ids = [string[]]@($selected | ForEach-Object { $_.Id })
+        foreach ($row in $selected) { $row.Status = 'En cola' }
         $ui.winGrid.Items.Refresh()
-        Start-Task "Instalar $($ids.Count) actualización(es) de Windows" 'Install-WindowsUpdates' @{ Ids = $ids }
+        Start-Task "Instalar $($ids.Count) actualización(es) de Windows" 'Install-WindowsUpdates' @{ Ids = $ids; QuietIds = $quietIds }
+    })
+
+$ui.btnWinSettings.Add_Click({
+        try { Start-Process 'ms-settings:windowsupdate' }
+        catch { Write-Log "No se pudo abrir Configuración: $($_.Exception.Message)" 'ERROR' }
     })
 
 $ui.btnRunUpdater.Add_Click({

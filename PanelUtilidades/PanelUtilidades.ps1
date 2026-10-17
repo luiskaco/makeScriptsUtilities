@@ -44,12 +44,21 @@ public static class PanelNative {
 $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent ([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) }
 $rootDir = Split-Path -Parent $scriptDir
 
-$sync = [hashtable]::Synchronized(@{ Queue = New-Object 'System.Collections.Concurrent.ConcurrentQueue[object]' })
+# Una carpeta logs/ por módulo, igual que ActualizarApps. Cada sesión del panel es un
+# archivo; se conservan los 30 más recientes.
+$logDir = Join-Path $scriptDir 'logs'
+$logFile = Join-Path $logDir ('panel-{0}.log' -f (Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'))
+$script:logFileFailed = $false
+# Tiempo máximo por app en «Actualizar seleccionadas»; la columna Estado lo muestra.
+$upgradeTimeoutSeconds = 300
+
+$sync =[hashtable]::Synchronized(@{ Queue = New-Object 'System.Collections.Concurrent.ConcurrentQueue[object]' })
 
 # --- Funciones de trabajo (corren dentro del runspace) -------------------------
 
 function Write-Log {
-    param([string]$Message, [ValidateSet('INFO', 'OK', 'WARN', 'ERROR', 'STEP')][string]$Type = 'INFO')
+    # 'FILE' va solo al archivo de log: detalle técnico que no hace falta en la consola.
+    param([string]$Message, [ValidateSet('INFO', 'OK', 'WARN', 'ERROR', 'STEP', 'FILE')][string]$Type = 'INFO')
     $sync.Queue.Enqueue([pscustomobject]@{ Kind = 'LOG'; Time = (Get-Date); Message = $Message; Type = $Type })
 }
 
@@ -79,13 +88,44 @@ function Invoke-Native {
     $stdout = $proc.StandardOutput.ReadToEndAsync()
     $stderr = $proc.StandardError.ReadToEndAsync()
     if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+        # Qué había corriendo justo antes de matarlo: es lo que explica por qué se colgó.
+        $tree = Get-ProcessTree -RootPid $proc.Id
         # /T mata también a los hijos: winget lanza el instalador como proceso aparte y
         # Kill() solo cerraría a winget, dejando el instalador corriendo.
         $null = Invoke-Native -File 'taskkill.exe' -Arguments "/PID $($proc.Id) /T /F" -TimeoutSeconds 15
-        return [pscustomobject]@{ Code = -1; TimedOut = $true; Output = ''; Error = '' }
+        # Con el proceso muerto las lecturas terminan enseguida; se rescata lo que alcanzó
+        # a escribir (la última línea de progreso suele decir qué esperaba).
+        [void]$stdout.Wait(3000)
+        [void]$stderr.Wait(3000)
+        return [pscustomobject]@{
+            Code = -1; TimedOut = $true; Tree = $tree
+            Output = $(if ($stdout.IsCompleted) { $stdout.Result } else { '' })
+            Error = $(if ($stderr.IsCompleted) { $stderr.Result } else { '' })
+        }
     }
     $proc.WaitForExit()
-    [pscustomobject]@{ Code = $proc.ExitCode; TimedOut = $false; Output = $stdout.Result; Error = $stderr.Result }
+    [pscustomobject]@{ Code = $proc.ExitCode; TimedOut = $false; Tree = ''; Output = $stdout.Result; Error = $stderr.Result }
+}
+
+function Get-ProcessTree {
+    # "nombre(pid) > hijo(pid)" de un proceso y sus descendientes, para el log.
+    param([int]$RootPid)
+    try {
+        $all = @(Get-CimInstance Win32_Process -ErrorAction Stop)
+        $lines = New-Object System.Collections.Generic.List[string]
+        $walk = {
+            param([int]$ProcessId, [int]$Depth)
+            $self = $all | Where-Object ProcessId -eq $ProcessId | Select-Object -First 1
+            if ($self) { $lines.Add(('{0}{1} (pid {2})' -f ('  ' * $Depth), $self.Name, $self.ProcessId)) }
+            foreach ($child in ($all | Where-Object { $_.ParentProcessId -eq $ProcessId -and $_.ProcessId -ne $ProcessId })) {
+                & $walk $child.ProcessId ($Depth + 1)
+            }
+        }
+        & $walk $RootPid 0
+        return ($lines -join "`n")
+    } catch {
+        return "(no se pudo leer el árbol de procesos: $($_.Exception.Message))"
+    }
 }
 
 function Get-Column {
@@ -170,9 +210,23 @@ function Install-SelectedUpgrades {
 
         $wingetArgs = "upgrade --id `"$($app.Id)`" --silent --include-unknown --disable-interactivity --accept-package-agreements --accept-source-agreements"
         if ($app.Source) { $wingetArgs += " --source `"$($app.Source)`"" }
+        # Se anota el inicio antes de lanzar: si el panel se cierra a la fuerza a mitad de
+        # una app, el log termina aquí y se sabe cuál era.
+        Write-Log "[$index/$($Apps.Count)] $($app.Name): winget $wingetArgs (límite $TimeoutSeconds s)" 'FILE'
         $clock = [Diagnostics.Stopwatch]::StartNew()
         $r = Invoke-Native -File 'winget.exe' -Arguments $wingetArgs -Utf8 -TimeoutSeconds $TimeoutSeconds
         $took = '{0:mm\:ss}' -f $clock.Elapsed
+
+        # Últimas líneas de lo que dijo winget, sin las barras de progreso ni el spinner.
+        $tail = @((($r.Output + "`n" + $r.Error) -replace '[▀-▟]+', ' ') -split '[\r\n]+' |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { $_ -and $_ -notmatch '^[-\\|/]$' } |
+                Select-Object -Last 15)
+        $hex = '0x{0:X8}' -f $r.Code
+        $detail = "$($app.Name): código=$($r.Code) ($hex) tiempo=$took sinRespuesta=$($r.TimedOut)"
+        if ($r.TimedOut -and $r.Tree) { $detail += "`nProcesos al vencer el límite:`n$($r.Tree)" }
+        $detail += "`nSalida de winget (últimas líneas):`n" + $(if ($tail.Count) { $tail -join "`n" } else { '(vacía)' })
+        Write-Log $detail 'FILE'
 
         if ($r.TimedOut) {
             $failed++
@@ -776,7 +830,7 @@ function Backup-UserProfile {
 
 $workerFunctions = @(
     'Write-Log', 'Send-Data', 'Invoke-Native', 'Get-Column', 'ConvertFrom-WingetTable',
-    'Find-PendingUpgrades', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Find-WindowsUpdates', 'Install-WindowsUpdates', 'Test-PrinterSocket', 'Send-PrinterResult',
+    'Find-PendingUpgrades', 'Get-ProcessTree', 'Get-WingetErrorMessage', 'Install-SelectedUpgrades', 'Find-WindowsUpdates', 'Install-WindowsUpdates', 'Test-PrinterSocket', 'Send-PrinterResult',
     'Get-PrinterDriverNames', 'Test-PrinterConnection', 'Send-PrinterTestPage', 'Get-InstalledPrinters',
     'Update-PrinterData', 'Set-DefaultPrinterByName', 'Remove-PrinterByName', 'Clear-PrintQueueDeep',
     'Install-NetworkPrinter', 'Test-HostPing', 'Resolve-HostName', 'Get-NetworkDiagnosis', 'Set-DnsPreset',
@@ -1244,7 +1298,7 @@ $infoCards
               <DataGridTextColumn Header="Instalada" Binding="{Binding Version}" IsReadOnly="True" Width="*"/>
               <DataGridTextColumn Header="Disponible" Binding="{Binding Available}" IsReadOnly="True" Width="*"/>
               <DataGridTextColumn Header="Origen" Binding="{Binding Source}" IsReadOnly="True" Width="0.7*"/>
-              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" Width="1.2*"/>
+              <DataGridTextColumn Header="Estado" Binding="{Binding Status}" IsReadOnly="True" MinWidth="190" Width="1.2*"/>
             </DataGrid.Columns>
           </DataGrid>
         </DockPanel>
@@ -1482,8 +1536,28 @@ if ($isAdmin) {
 $ui.hostText.Text = "$env:COMPUTERNAME · $env:USERNAME"
 $ui.cleanTarget.Text = "Destino: $((Get-ProfileFolders).Backup)"
 
+function Write-LogFile {
+    # Corre en el hilo de la UI: todo lo que llega por la cola pasa por aquí, así que no
+    # hay dos escritores. Un fallo de disco (carpeta de solo lectura, disco lleno) se
+    # avisa una vez en la consola y no interrumpe el panel.
+    param([datetime]$Time, [string]$Type, [string]$Message)
+    try {
+        if (-not (Test-Path $logDir)) { [void](New-Item -ItemType Directory -Path $logDir -Force -ErrorAction Stop) }
+        # Los mensajes de varias líneas se sangran para que cada entrada se lea como un bloque.
+        $text = ($Message -split "`r?`n") -join "`r`n           "
+        [IO.File]::AppendAllText($logFile, ('{0}  {1,-5}  {2}{3}' -f $Time.ToString('HH:mm:ss'), $Type, $text, "`r`n"), [Text.Encoding]::UTF8)
+    } catch {
+        if (-not $script:logFileFailed) {
+            $script:logFileFailed = $true
+            Write-Log "No se pudo escribir el log en $logDir`: $($_.Exception.Message)" 'WARN'
+        }
+    }
+}
+
 function Add-LogLine {
     param($Entry)
+    Write-LogFile $Entry.Time $Entry.Type $Entry.Message
+    if ($Entry.Type -eq 'FILE') { return }
     $paragraph = New-Object Windows.Documents.Paragraph
     $paragraph.Margin = New-Object Windows.Thickness 0
     $time = New-Object Windows.Documents.Run ($Entry.Time.ToString('HH:mm:ss') + '  ')
@@ -1592,6 +1666,14 @@ function Receive-Data {
             $row = $script:upgRows | Where-Object { $_.Id -eq $Item.Value.Id } | Select-Object -First 1
             if ($row) {
                 $row.Status = $Item.Value.Status
+                # El runspace solo avisa de los cambios de estado; el cronómetro de la app
+                # en curso lo lleva la UI (ver Update-InstallClock).
+                if ($Item.Value.Status -eq 'Instalando…') {
+                    $script:instRow = $row
+                    $script:instClock = [Diagnostics.Stopwatch]::StartNew()
+                } elseif ($script:instRow -and $script:instRow.Id -eq $row.Id) {
+                    $script:instRow = $null
+                }
                 $ui.upgGrid.Items.Refresh()
             }
         }
@@ -1609,6 +1691,19 @@ function Set-Busy {
 }
 
 $script:task = $null
+$script:instRow = $null
+$script:instClock = $null
+
+function Update-InstallClock {
+    # «Instalando… 02:15 / 05:00» en la fila de la app en curso: si algo se cuelga se ve
+    # cuánto lleva y cuánto falta para que el panel lo cancele.
+    if (-not $script:instRow) { return }
+    $label = 'Instalando… {0:mm\:ss} / {1:mm\:ss}' -f $script:instClock.Elapsed, [TimeSpan]::FromSeconds($upgradeTimeoutSeconds)
+    if ($script:instRow.Status -ne $label) {
+        $script:instRow.Status = $label
+        $ui.upgGrid.Items.Refresh()
+    }
+}
 
 function Start-Task {
     param([string]$Title, [string]$Command, [hashtable]$Parameters)
@@ -1624,6 +1719,7 @@ function Start-Task {
 function Complete-Task {
     $t = $script:task
     $script:task = $null
+    $script:instRow = $null
     $ok = $true
     try {
         [void]$t.PS.EndInvoke($t.Handle)
@@ -1654,6 +1750,7 @@ $timer.Add_Tick({
         while ($sync.Queue.TryDequeue([ref]$item)) {
             if ($item.Kind -eq 'DATA') { Receive-Data $item } else { Add-LogLine $item }
         }
+        Update-InstallClock
         if ($finished) { Complete-Task }
     })
 
@@ -1677,7 +1774,7 @@ $ui.btnInstallSelected.Add_Click({
         }
         foreach ($row in $script:upgRows) { if ($row.Selected) { $row.Status = 'En cola' } }
         $ui.upgGrid.Items.Refresh()
-        Start-Task "Actualizar $($selected.Count) aplicación(es)" 'Install-SelectedUpgrades' @{ Apps = $selected }
+        Start-Task "Actualizar $($selected.Count) aplicación(es)" 'Install-SelectedUpgrades' @{ Apps = $selected; TimeoutSeconds = $upgradeTimeoutSeconds }
     })
 
 $script:driversLoaded = $false
@@ -1857,7 +1954,23 @@ $window.Add_Closing({
             [void]$script:task.PS.BeginStop($null, $null)
         }
         $timer.Stop()
+        # El temporizador ya no vaciará la cola: lo pendiente se vuelca al archivo aquí.
+        $pending = $null
+        while ($sync.Queue.TryDequeue([ref]$pending)) {
+            if ($pending.Kind -eq 'LOG') { Write-LogFile $pending.Time $pending.Type $pending.Message }
+        }
+        $closeNote = if ($script:task) { "Panel cerrado con la tarea «$($script:task.Title)» en curso." } else { 'Panel cerrado.' }
+        Write-LogFile (Get-Date) 'FILE' $closeNote
     })
+
+# Rotación: se conservan los 30 logs más recientes.
+try {
+    Get-ChildItem -Path $logDir -Filter 'panel-*.log' -ErrorAction Stop |
+        Sort-Object LastWriteTime -Descending | Select-Object -Skip 30 |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+} catch {}
+Write-Log ('Sesión iniciada: {0} · {1} · administrador={2} · PowerShell {3}' -f $env:COMPUTERNAME, $env:USERNAME, $isAdmin, $PSVersionTable.PSVersion) 'FILE'
+Write-Log "Log de esta sesión: $logFile" 'INFO'
 
 $timer.Start()
 [void]$window.ShowDialog()

@@ -66,6 +66,7 @@
   - [ ] Salud del disco: temperatura, desgaste y errores con `Get-StorageReliabilityCounter`.
 - [ ] **Módulo `PanelUtilidades/` — automatización:**
   - [ ] Programar `ActualizarApps` en el Programador de tareas (p. ej. domingos 22:00), activable/desactivable desde el panel.
-  - [ ] Guardar el log del panel a archivo en `PanelUtilidades/logs/`, como hace `ActualizarApps`.
+  - [x] Guardar el log del panel a archivo en `PanelUtilidades/logs/`, como hace `ActualizarApps` (2026-10-17). Incluye detalle de winget por app y árbol de procesos al vencer el límite.
+  - [ ] **Investigar el bloqueo de «Instalando…» en Edge** (reportado 2026-10-17): no se reprodujo (Edge falla en ~2 s con `0x8A15008E`, tecnología de instalación distinta). Cuando ocurra, revisar el último `PanelUtilidades/logs/panel-*.log`: el código de salida, la salida de winget y los procesos que seguían vivos dicen qué esperaba.
 - [ ] **Mantenimiento del repositorio:**
   - [x] Sacados de git los 34 logs versionados (28 de `ActualizarApps/logs/` y 6 de `InfoEquipo/logs/`) con `git rm --cached` (2026-10-16); los archivos siguen en disco.
